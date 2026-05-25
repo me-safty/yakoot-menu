@@ -247,8 +247,27 @@ const socialLinks = {
 			});
 
 			closeButton?.addEventListener('click', () => closeCategory());
+			function isInsideRenderedImage(event) {
+				if (!menuImage || !menuImage.naturalWidth || !menuImage.naturalHeight) return false;
+				const rect = menuImage.getBoundingClientRect();
+				const imageRatio = menuImage.naturalWidth / menuImage.naturalHeight;
+				const frameRatio = rect.width / rect.height;
+				const renderedWidth = frameRatio > imageRatio ? rect.height * imageRatio : rect.width;
+				const renderedHeight = frameRatio > imageRatio ? rect.height : rect.width / imageRatio;
+				const left = rect.left + (rect.width - renderedWidth) / 2;
+				const top = rect.top + (rect.height - renderedHeight) / 2;
+
+				return (
+					event.clientX >= left &&
+					event.clientX <= left + renderedWidth &&
+					event.clientY >= top &&
+					event.clientY <= top + renderedHeight
+				);
+			}
+
 			dialog?.addEventListener('click', (event) => {
-				if (event.target === dialog) {
+				if (!menuImage || closeButton?.contains(event.target)) return;
+				if (!isInsideRenderedImage(event)) {
 					closeCategory();
 				}
 			});
