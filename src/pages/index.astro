@@ -12,6 +12,7 @@ type Category = {
 	slug: string;
 	imageUrl: string;
 	tone: number;
+	shapeStyle: string;
 };
 
 const pocketBaseUrl = import.meta.env.PUBLIC_POCKETBASE_URL?.replace(/\/$/, '') ?? '';
@@ -21,6 +22,47 @@ let cmsError = '';
 function toneFromSlug(slug: string) {
 	const total = [...slug].reduce((sum, char) => sum + char.charCodeAt(0), 0);
 	return (total % 6) + 1;
+}
+
+function randomShapeStyle(slug: string, index: number) {
+	const seed = [...`${slug}-${index}`].reduce(
+		(sum, char, charIndex) => sum + char.charCodeAt(0) * (charIndex + 17),
+		0
+	);
+	const pick = (values: string[], offset: number) =>
+		values[(seed * (offset + 3) + index * (offset + 11)) % values.length];
+	const range = (min: number, max: number, offset: number) => {
+		const ratio = ((seed * (offset + 5) + index * (offset + 29)) % 100) / 100;
+		return min + (max - min) * ratio;
+	};
+
+	return [
+		`--shape-one-size:${range(7.2, 11.2, 1).toFixed(2)}rem`,
+		`--shape-one-top:${range(-3.2, 2.2, 2).toFixed(2)}rem`,
+		`--shape-one-end:${range(-4.4, 1.4, 3).toFixed(2)}rem`,
+		`--shape-one-radius:${pick(['50%', '34% 66% 45% 55%', '8px', '999px', '62% 38% 70% 30%'], 4)}`,
+		`--shape-two-width:${range(6.2, 11.4, 5).toFixed(2)}rem`,
+		`--shape-two-height:${range(2, 6, 6).toFixed(2)}rem`,
+		`--shape-two-bottom:${range(1.2, 5.8, 7).toFixed(2)}rem`,
+		`--shape-two-top:${pick(['auto', '14%', '28%', '42%', '58%', '70%'], 8)}`,
+		`--shape-two-end:${range(-4.2, 1.8, 9).toFixed(2)}rem`,
+		`--shape-two-radius:${pick(['50%', '8px', '999px', '42% 58% 36% 64%', '18% 82% 24% 76%'], 10)}`,
+		`--shape-two-rotate:${Math.round(range(-34, 38, 11))}deg`,
+		`--shape-three-size:${range(0.85, 1.9, 12).toFixed(2)}rem`,
+		`--shape-three-top:${Math.round(range(16, 74, 13))}%`,
+		`--shape-three-end:${Math.round(range(8, 28, 14))}%`,
+		`--shape-three-rotate:${Math.round(range(0, 90, 15))}deg`,
+		`--shape-three-path:${pick(
+			[
+				'polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%)',
+				'polygon(50% 0, 100% 100%, 0 100%)',
+				'polygon(25% 0, 100% 0, 75% 100%, 0 100%)',
+				'circle(50% at 50% 50%)',
+				'polygon(50% 0, 100% 38%, 82% 100%, 18% 100%, 0 38%)',
+			],
+			16
+		)}`,
+	].join(';');
 }
 
 if (pocketBaseUrl) {
@@ -41,13 +83,14 @@ if (pocketBaseUrl) {
 		categories =
 			data.items
 				?.filter((record) => record.name && record.slug && record.menuImage)
-				.map((record) => ({
+				.map((record, index) => ({
 					name: record.name,
 					slug: record.slug,
 					imageUrl: `${pocketBaseUrl}/api/files/categories/${record.id}/${encodeURIComponent(
 						record.menuImage
 					)}`,
 					tone: toneFromSlug(record.slug),
+					shapeStyle: randomShapeStyle(record.slug, index),
 				})) ?? [];
 	} catch (error) {
 		cmsError = error instanceof Error ? error.message : 'Could not load menu.';
@@ -110,6 +153,7 @@ const socialLinks = {
 								type="button"
 								data-slug={category.slug}
 								aria-label={`Open ${category.name} menu`}
+								style={category.shapeStyle}
 							>
 								<span class="shape shape-one" aria-hidden="true" />
 								<span class="shape shape-two" aria-hidden="true" />
@@ -499,30 +543,35 @@ const socialLinks = {
 	}
 
 	.shape-one {
-		width: 9rem;
-		height: 9rem;
-		top: -2.4rem;
-		inset-inline-end: -2.1rem;
-		border-radius: 50%;
+		width: var(--shape-one-size, 9rem);
+		height: var(--shape-one-size, 9rem);
+		top: var(--shape-one-top, -2.4rem);
+		inset-inline-end: var(--shape-one-end, -2.1rem);
+		border-radius: var(--shape-one-radius, 50%);
 	}
 
 	.shape-two {
-		width: 8.5rem;
-		height: 2.7rem;
-		bottom: 3rem;
-		inset-inline-end: -1.8rem;
-		border-radius: 50%;
-		transform: rotate(18deg);
+		width: var(--shape-two-width, 8.5rem);
+		height: var(--shape-two-height, 2.7rem);
+		top: var(--shape-two-top, auto);
+		bottom: var(--shape-two-bottom, 3rem);
+		inset-inline-end: var(--shape-two-end, -1.8rem);
+		border-radius: var(--shape-two-radius, 50%);
+		transform: rotate(var(--shape-two-rotate, 18deg));
 	}
 
 	.shape-three {
-		width: 1.1rem;
-		height: 1.1rem;
-		top: 42%;
-		inset-inline-end: 28%;
+		width: var(--shape-three-size, 1.1rem);
+		height: var(--shape-three-size, 1.1rem);
+		top: var(--shape-three-top, 42%);
+		inset-inline-end: var(--shape-three-end, 28%);
 		border-width: 0;
 		background: rgb(255 250 241 / 86%);
-		clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+		clip-path: var(
+			--shape-three-path,
+			polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%)
+		);
+		transform: rotate(var(--shape-three-rotate, 0deg));
 	}
 
 	.tone-1 {
@@ -697,6 +746,14 @@ const socialLinks = {
 
 		.category-card {
 			min-height: 9.6rem;
+		}
+
+		.shape-one {
+			inset-inline-end: max(var(--shape-one-end, -2.1rem), -0.9rem);
+		}
+
+		.shape-two {
+			inset-inline-end: max(var(--shape-two-end, -1.8rem), -0.9rem);
 		}
 
 		.category-name {
