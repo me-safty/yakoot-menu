@@ -1,17 +1,702 @@
 ---
+type PocketBaseRecord = {
+	id: string;
+	name: string;
+	slug: string;
+	menuImage: string;
+	sort?: number;
+};
 
+type Category = {
+	name: string;
+	slug: string;
+	imageUrl: string;
+	tone: number;
+};
+
+const pocketBaseUrl = import.meta.env.PUBLIC_POCKETBASE_URL?.replace(/\/$/, '') ?? '';
+let categories: Category[] = [];
+let cmsError = '';
+
+function toneFromSlug(slug: string) {
+	const total = [...slug].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+	return (total % 6) + 1;
+}
+
+if (pocketBaseUrl) {
+	try {
+		const params = new URLSearchParams({
+			sort: 'sort,name',
+			filter: 'isActive=true',
+		});
+		const response = await fetch(
+			`${pocketBaseUrl}/api/collections/categories/records?${params.toString()}`
+		);
+
+		if (!response.ok) {
+			throw new Error(`PocketBase returned ${response.status}`);
+		}
+
+		const data = (await response.json()) as { items?: PocketBaseRecord[] };
+		categories =
+			data.items
+				?.filter((record) => record.name && record.slug && record.menuImage)
+				.map((record) => ({
+					name: record.name,
+					slug: record.slug,
+					imageUrl: `${pocketBaseUrl}/api/files/categories/${record.id}/${encodeURIComponent(
+						record.menuImage
+					)}`,
+					tone: toneFromSlug(record.slug),
+				})) ?? [];
+	} catch (error) {
+		cmsError = error instanceof Error ? error.message : 'Could not load menu.';
+	}
+}
+
+const restaurant = {
+	name: 'ياقوت',
+	phone: '0100 000 0000',
+	address: 'Cairo, Egypt',
+	hours: 'Daily 10:00 AM - 12:00 AM',
+};
+
+const socialLinks = {
+	facebook: '#',
+	instagram: '#',
+};
 ---
 
-<html lang="en">
+<!doctype html>
+<html lang="ar" dir="rtl">
 	<head>
 		<meta charset="utf-8" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
+		<meta
+			name="description"
+			content="Yakoot restaurant menu categories and menu images."
+		/>
+		<title>{restaurant.name} Menu</title>
 	</head>
 	<body>
-		<h1>Astro</h1>
+		<header class="site-header" aria-label="Primary">
+			<a class="brand" href="/" aria-label={`${restaurant.name} home`}>
+				{restaurant.name}
+			</a>
+			<nav class="social-links" aria-label="Social links">
+				<a class="icon-link" href={socialLinks.facebook} aria-label="Facebook">
+					<svg viewBox="0 0 24 24" aria-hidden="true">
+						<path d="M14 8.4V6.8c0-.8.5-1.1 1.2-1.1h1.6V3h-2.4C11.7 3 10 4.6 10 7.2v1.2H7.8v3H10V21h3.3v-9.6h2.7l.5-3H14Z" />
+					</svg>
+				</a>
+				<a class="icon-link" href={socialLinks.instagram} aria-label="Instagram">
+					<svg viewBox="0 0 24 24" aria-hidden="true">
+						<path d="M8 3h8a5 5 0 0 1 5 5v8a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5V8a5 5 0 0 1 5-5Zm0 2.2A2.8 2.8 0 0 0 5.2 8v8A2.8 2.8 0 0 0 8 18.8h8a2.8 2.8 0 0 0 2.8-2.8V8A2.8 2.8 0 0 0 16 5.2H8Zm4 3.2a3.6 3.6 0 1 1 0 7.2 3.6 3.6 0 0 1 0-7.2Zm0 2.1a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm4.2-2.7a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z" />
+					</svg>
+				</a>
+			</nav>
+		</header>
+
+		<main class="shell">
+			{
+				categories.length > 0 ? (
+					<section class="category-grid" aria-label="Menu categories">
+						{categories.map((category) => (
+							<button
+								class={`category-card tone-${category.tone}`}
+								type="button"
+								data-slug={category.slug}
+								aria-label={`Open ${category.name} menu`}
+							>
+								<span class="shape shape-one" aria-hidden="true" />
+								<span class="shape shape-two" aria-hidden="true" />
+								<span class="shape shape-three" aria-hidden="true" />
+								<span class="category-name">{category.name}</span>
+							</button>
+						))}
+					</section>
+				) : (
+					<section class="empty-state" aria-live="polite">
+						<h2>Menu not available</h2>
+						<p>
+							{pocketBaseUrl
+								? cmsError || 'No active categories found.'
+								: 'Set PUBLIC_POCKETBASE_URL to load categories.'}
+						</p>
+					</section>
+				)
+			}
+		</main>
+
+		<footer class="site-footer">
+			<strong>{restaurant.name}</strong>
+			<div class="contact-details">
+				<a href={`tel:${restaurant.phone.replaceAll(' ', '')}`}>{restaurant.phone}</a>
+				<span>{restaurant.address}</span>
+				<span>{restaurant.hours}</span>
+			</div>
+			<nav class="social-links footer-social-links" aria-label="Footer social links">
+				<a class="icon-link" href={socialLinks.facebook} aria-label="Facebook">
+					<svg viewBox="0 0 24 24" aria-hidden="true">
+						<path d="M14 8.4V6.8c0-.8.5-1.1 1.2-1.1h1.6V3h-2.4C11.7 3 10 4.6 10 7.2v1.2H7.8v3H10V21h3.3v-9.6h2.7l.5-3H14Z" />
+					</svg>
+				</a>
+				<a class="icon-link" href={socialLinks.instagram} aria-label="Instagram">
+					<svg viewBox="0 0 24 24" aria-hidden="true">
+						<path d="M8 3h8a5 5 0 0 1 5 5v8a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5V8a5 5 0 0 1 5-5Zm0 2.2A2.8 2.8 0 0 0 5.2 8v8A2.8 2.8 0 0 0 8 18.8h8a2.8 2.8 0 0 0 2.8-2.8V8A2.8 2.8 0 0 0 16 5.2H8Zm4 3.2a3.6 3.6 0 1 1 0 7.2 3.6 3.6 0 0 1 0-7.2Zm0 2.1a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm4.2-2.7a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z" />
+					</svg>
+				</a>
+			</nav>
+		</footer>
+
+		<dialog id="menuDialog" class="menu-dialog" aria-label="Menu image viewer">
+			<div class="dialog-bar">
+				<strong id="dialogTitle"></strong>
+				<button class="close" type="button" aria-label="Close menu">×</button>
+			</div>
+			<div class="image-stage">
+				<img id="menuImage" alt="" />
+			</div>
+		</dialog>
+
+		<script type="application/json" id="categories-data" set:html={JSON.stringify(categories)} />
+
+		<script>
+			const dataElement = document.getElementById('categories-data');
+			const categories = JSON.parse(dataElement?.textContent || '[]');
+			const categoriesBySlug = new Map(categories.map((category) => [category.slug, category]));
+			const dialog = document.getElementById('menuDialog');
+			const menuImage = document.getElementById('menuImage');
+			const dialogTitle = document.getElementById('dialogTitle');
+			const closeButton = dialog?.querySelector('.close');
+			let skipCloseUrlSync = false;
+			let activeImageRequest = 0;
+
+			function setCategoryParam(slug) {
+				const url = new URL(window.location.href);
+				if (slug) {
+					url.searchParams.set('category', slug);
+				} else {
+					url.searchParams.delete('category');
+				}
+				window.history.pushState({}, '', url);
+			}
+
+			function openCategory(category, shouldPushState = true) {
+				if (!dialog || !menuImage || !dialogTitle || !category) return;
+
+				const requestId = ++activeImageRequest;
+				dialog.dataset.imageState = 'loading';
+				menuImage.removeAttribute('src');
+				menuImage.alt = '';
+				dialogTitle.textContent = category.name;
+
+				if (!dialog.open) {
+					dialog.showModal();
+				}
+
+				const nextImage = new Image();
+				nextImage.onload = async () => {
+					if (requestId !== activeImageRequest) return;
+					try {
+						await nextImage.decode();
+					} catch {
+						// The image is already loaded; decode can fail on some browsers.
+					}
+					if (requestId !== activeImageRequest) return;
+					menuImage.src = category.imageUrl;
+					menuImage.alt = `${category.name} menu`;
+					dialog.dataset.imageState = 'loaded';
+				};
+				nextImage.onerror = () => {
+					if (requestId !== activeImageRequest) return;
+					menuImage.src = category.imageUrl;
+					menuImage.alt = `${category.name} menu`;
+					dialog.dataset.imageState = 'loaded';
+				};
+				nextImage.src = category.imageUrl;
+
+				if (shouldPushState) {
+					setCategoryParam(category.slug);
+				}
+			}
+
+			function closeCategory(shouldPushState = true) {
+				if (!dialog || !menuImage) return;
+				activeImageRequest++;
+				dialog.dataset.imageState = 'loading';
+				menuImage.removeAttribute('src');
+				menuImage.alt = '';
+				if (dialog.open) {
+					skipCloseUrlSync = true;
+					dialog.close();
+				}
+				if (shouldPushState) {
+					setCategoryParam('');
+				}
+			}
+
+			document.querySelectorAll('.category-card').forEach((button) => {
+				button.addEventListener('click', () => {
+					const category = categoriesBySlug.get(button.dataset.slug);
+					openCategory(category);
+				});
+			});
+
+			closeButton?.addEventListener('click', () => closeCategory());
+			dialog?.addEventListener('click', (event) => {
+				if (event.target === dialog) {
+					closeCategory();
+				}
+			});
+			dialog?.addEventListener('close', () => {
+				if (skipCloseUrlSync) {
+					skipCloseUrlSync = false;
+					return;
+				}
+
+				const activeSlug = new URL(window.location.href).searchParams.get('category');
+				if (activeSlug) {
+					setCategoryParam('');
+				}
+			});
+
+			window.addEventListener('popstate', () => {
+				const slug = new URL(window.location.href).searchParams.get('category');
+				const category = slug ? categoriesBySlug.get(slug) : null;
+				if (category) {
+					openCategory(category, false);
+				} else {
+					closeCategory(false);
+				}
+			});
+
+			const initialSlug = new URL(window.location.href).searchParams.get('category');
+			if (initialSlug && categoriesBySlug.has(initialSlug)) {
+				openCategory(categoriesBySlug.get(initialSlug), false);
+			}
+		</script>
 	</body>
 </html>
+
+<style>
+	:root {
+		color-scheme: light;
+		--ink: #251817;
+		--muted: #6f5b56;
+		--paper: #fff8ef;
+		--cream: #f3e2ca;
+		--rose: #9f6f70;
+		--plum: #513341;
+		--gold: #c58a2d;
+		--green: #406450;
+		--shadow: 0 24px 60px rgb(62 33 28 / 16%);
+		font-family:
+			Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+			sans-serif;
+	}
+
+	* {
+		box-sizing: border-box;
+	}
+
+	html {
+		min-height: 100%;
+		background:
+			radial-gradient(circle at 18% 18%, rgb(197 138 45 / 18%), transparent 28rem),
+			radial-gradient(circle at 92% 10%, rgb(64 100 80 / 14%), transparent 24rem),
+			linear-gradient(135deg, var(--paper), #f6ead9 54%, #efe0d4);
+		color: var(--ink);
+	}
+
+	body {
+		min-height: 100vh;
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+	}
+
+	button,
+	a {
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	.site-header {
+		position: sticky;
+		top: 0;
+		z-index: 10;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		padding: 1rem clamp(1rem, 4vw, 3.5rem);
+		background: rgb(255 248 239 / 82%);
+		backdrop-filter: blur(18px);
+		border-bottom: 1px solid rgb(37 24 23 / 10%);
+	}
+
+	.brand,
+	.icon-link {
+		color: var(--ink);
+		text-decoration: none;
+	}
+
+	.brand {
+		font-family: Georgia, "Times New Roman", serif;
+		font-size: clamp(2rem, 6vw, 3.8rem);
+		font-weight: 700;
+		line-height: 0.9;
+	}
+
+	.social-links {
+		direction: ltr;
+		display: flex;
+		align-items: center;
+		gap: 0.55rem;
+	}
+
+	.icon-link {
+		width: 2.45rem;
+		height: 2.45rem;
+		border: 1px solid rgb(37 24 23 / 14%);
+		border-radius: 999px;
+		display: grid;
+		place-items: center;
+		background: rgb(255 255 255 / 42%);
+		transition:
+			background 180ms ease,
+			transform 180ms ease,
+			border-color 180ms ease;
+	}
+
+	.icon-link:hover,
+	.icon-link:focus-visible {
+		background: var(--ink);
+		border-color: var(--ink);
+		color: var(--paper);
+		transform: translateY(-1px);
+	}
+
+	.icon-link svg {
+		width: 1.18rem;
+		height: 1.18rem;
+		fill: currentColor;
+	}
+
+	.shell {
+		width: min(1120px, calc(100% - 2rem));
+		margin: 0 auto;
+		padding: clamp(1.5rem, 5vw, 3rem) 0 4rem;
+		flex: 1;
+	}
+
+	.category-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 15.5rem), 1fr));
+		gap: clamp(0.9rem, 2.5vw, 1.4rem);
+	}
+
+	.category-card {
+		position: relative;
+		isolation: isolate;
+		min-height: clamp(11rem, 27vw, 17rem);
+		overflow: hidden;
+		border: 1px solid rgb(255 255 255 / 45%);
+		border-radius: 8px;
+		padding: 1.2rem;
+		display: flex;
+		align-items: flex-end;
+		justify-content: flex-start;
+		text-align: start;
+		color: #fffaf1;
+		background: var(--card-bg, var(--rose));
+		box-shadow: var(--shadow);
+		cursor: pointer;
+		transform: translateY(0);
+		transition:
+			transform 180ms ease,
+			box-shadow 180ms ease,
+			filter 180ms ease;
+	}
+
+	.category-card::before {
+		content: "";
+		position: absolute;
+		inset: 0;
+		z-index: -2;
+		background:
+			linear-gradient(270deg, rgb(18 12 10 / 52%), rgb(18 12 10 / 18%) 42%, transparent 72%),
+			linear-gradient(135deg, rgb(255 255 255 / 22%), transparent 42%),
+			radial-gradient(circle at 75% 8%, rgb(255 255 255 / 18%), transparent 10rem);
+	}
+
+	.category-card::after {
+		content: "";
+		position: absolute;
+		inset: 0;
+		z-index: -1;
+		background-image:
+			linear-gradient(90deg, rgb(255 255 255 / 7%) 1px, transparent 1px),
+			linear-gradient(rgb(255 255 255 / 6%) 1px, transparent 1px);
+		background-size: 32px 32px;
+		mask-image: linear-gradient(to top, black, transparent 78%);
+	}
+
+	.category-card:hover,
+	.category-card:focus-visible {
+		transform: translateY(-4px);
+		box-shadow: 0 32px 76px rgb(62 33 28 / 22%);
+		filter: saturate(1.05);
+	}
+
+	.category-card:focus-visible,
+	.close:focus-visible,
+	a:focus-visible {
+		outline: 3px solid var(--gold);
+		outline-offset: 4px;
+	}
+
+	.category-name {
+		position: relative;
+		z-index: 2;
+		max-width: 11ch;
+		font-family: Georgia, "Times New Roman", serif;
+		font-size: clamp(2rem, 6vw, 3.8rem);
+		font-weight: 800;
+		line-height: 0.9;
+		text-shadow:
+			0 2px 2px rgb(20 10 8 / 78%),
+			0 8px 24px rgb(20 10 8 / 58%);
+	}
+
+	.shape {
+		position: absolute;
+		display: block;
+		border: 2px solid rgb(255 250 241 / 74%);
+		pointer-events: none;
+	}
+
+	.shape-one {
+		width: 9rem;
+		height: 9rem;
+		top: -2.4rem;
+		inset-inline-end: -2.1rem;
+		border-radius: 50%;
+	}
+
+	.shape-two {
+		width: 8.5rem;
+		height: 2.7rem;
+		bottom: 3rem;
+		inset-inline-end: -1.8rem;
+		border-radius: 50%;
+		transform: rotate(18deg);
+	}
+
+	.shape-three {
+		width: 1.1rem;
+		height: 1.1rem;
+		top: 42%;
+		inset-inline-end: 28%;
+		border-width: 0;
+		background: rgb(255 250 241 / 86%);
+		clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+	}
+
+	.tone-1 {
+		--card-bg: linear-gradient(135deg, #9f6f70, #513341);
+	}
+
+	.tone-2 {
+		--card-bg: linear-gradient(135deg, #406450, #263c33);
+	}
+
+	.tone-3 {
+		--card-bg: linear-gradient(135deg, #c58a2d, #70452b);
+	}
+
+	.tone-4 {
+		--card-bg: linear-gradient(135deg, #725247, #2f2520);
+	}
+
+	.tone-5 {
+		--card-bg: linear-gradient(135deg, #6d7480, #303845);
+	}
+
+	.tone-6 {
+		--card-bg: linear-gradient(135deg, #b36f4d, #5f342e);
+	}
+
+	.empty-state {
+		max-width: 34rem;
+		padding: clamp(1.2rem, 4vw, 2rem);
+		border: 1px solid rgb(37 24 23 / 12%);
+		border-radius: 8px;
+		background: rgb(255 255 255 / 45%);
+	}
+
+	.empty-state h2,
+	.empty-state p {
+		margin: 0;
+	}
+
+	.empty-state h2 {
+		margin-bottom: 0.5rem;
+		font-size: 1.2rem;
+	}
+
+	.empty-state p {
+		direction: ltr;
+		color: var(--muted);
+	}
+
+	.site-footer {
+		margin-top: auto;
+		padding: 1rem clamp(1rem, 4vw, 3.5rem);
+		border: 1px solid rgb(37 24 23 / 12%);
+		border-inline: 0;
+		border-bottom: 0;
+		background: rgb(255 248 239 / 82%);
+		backdrop-filter: blur(18px);
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem 2rem;
+		flex-wrap: wrap;
+		box-shadow: 0 -14px 38px rgb(62 33 28 / 7%);
+	}
+
+	.site-footer strong {
+		font-family: Georgia, "Times New Roman", serif;
+		font-size: 1.5rem;
+		line-height: 1;
+	}
+
+	.contact-details {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.7rem 1.2rem;
+		color: var(--muted);
+		direction: ltr;
+	}
+
+	.contact-details a {
+		color: var(--ink);
+		font-weight: 800;
+		text-decoration: none;
+	}
+
+	.footer-social-links {
+		margin-inline-start: auto;
+	}
+
+	.menu-dialog {
+		width: 100vw;
+		max-width: none;
+		height: 100dvh;
+		max-height: none;
+		margin: 0;
+		padding: 0;
+		border: 0;
+		background: #18100f;
+		color: #fffaf1;
+	}
+
+	.menu-dialog::backdrop {
+		background: rgb(15 8 7 / 72%);
+	}
+
+	.dialog-bar {
+		position: sticky;
+		top: 0;
+		z-index: 2;
+		min-height: 4.25rem;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		padding: 0.8rem clamp(1rem, 4vw, 2rem);
+		background: rgb(24 16 15 / 88%);
+		backdrop-filter: blur(18px);
+		border-bottom: 1px solid rgb(255 250 241 / 14%);
+	}
+
+	.dialog-bar strong {
+		font-size: 1.1rem;
+	}
+
+	.close {
+		width: 2.75rem;
+		height: 2.75rem;
+		border: 1px solid rgb(255 250 241 / 24%);
+		border-radius: 999px;
+		background: rgb(255 250 241 / 10%);
+		color: #fffaf1;
+		font-size: 2rem;
+		line-height: 1;
+		cursor: pointer;
+	}
+
+	.image-stage {
+		height: calc(100dvh - 4.25rem);
+		overflow: hidden;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: clamp(0.75rem, 3vw, 1.5rem);
+		background: #18100f;
+	}
+
+	.image-stage img {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
+		border-radius: 8px;
+		background: #30211f;
+		box-shadow: 0 24px 80px rgb(0 0 0 / 36%);
+		opacity: 0;
+		transition: opacity 160ms ease;
+	}
+
+	.menu-dialog[data-image-state="loaded"] .image-stage img {
+		opacity: 1;
+	}
+
+	@media (max-width: 620px) {
+		.site-header {
+			padding-block: 0.75rem;
+		}
+
+		.shell {
+			width: min(100% - 1rem, 1120px);
+			padding-top: 1rem;
+		}
+
+		.category-card {
+			min-height: 9.6rem;
+		}
+
+		.category-name {
+			font-size: clamp(1.8rem, 12vw, 3.2rem);
+		}
+
+		.contact-details {
+			flex-direction: column;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		*,
+		*::before,
+		*::after {
+			scroll-behavior: auto !important;
+			transition-duration: 0.01ms !important;
+			animation-duration: 0.01ms !important;
+			animation-iteration-count: 1 !important;
+		}
+	}
+</style>

@@ -1,43 +1,62 @@
-# Astro Starter Kit: Minimal
+# Yakoot Menu
+
+Astro restaurant menu site backed by PocketBase.
+
+## Env
+
+Copy `.env.example` to `.env` and set:
 
 ```sh
-pnpm create astro@latest -- --template minimal
+PUBLIC_POCKETBASE_URL=http://127.0.0.1:8090
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## PocketBase
 
-## 🚀 Project Structure
+PocketBase CMS source is in repo:
 
-Inside of your Astro project, you'll see the following folders and files:
+- `pb_migrations/`: schema
+- `scripts/install-pocketbase.mjs`: local binary installer
+- `pb_data/`: local CMS data, ignored
+- `.tools/pocketbase`: downloaded binary, ignored
 
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
+Run:
+
+```sh
+pnpm run pb:install
+pnpm run pb:serve
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+Admin UI:
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+```txt
+http://127.0.0.1:8090/_/
+```
 
-Any static assets, like images, can be placed in the `public/` directory.
+The first launch creates `pb_data/` and applies migrations.
 
-## 🧞 Commands
+Tracked migration creates collection `categories`:
 
-All commands are run from the root of the project, from a terminal:
+| Field | Type | Notes |
+| --- | --- | --- |
+| `name` | text | required |
+| `slug` | text | required, unique |
+| `menuImage` | file | required, max files 1, jpg/png/webp |
+| `sort` | number | optional |
+| `isActive` | bool | required |
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `pnpm install`             | Installs dependencies                            |
-| `pnpm dev`             | Starts local dev server at `localhost:4321`      |
-| `pnpm build`           | Build your production site to `./dist/`          |
-| `pnpm preview`         | Preview your build locally, before deploying     |
-| `pnpm astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `pnpm astro -- --help` | Get help using the Astro CLI                     |
+Public list/view rule:
 
-## 👀 Want to learn more?
+```txt
+isActive = true
+```
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+## Commands
+
+```sh
+pnpm dev
+pnpm run pb:install
+pnpm run pb:serve
+pnpm run dev:all
+pnpm build
+pnpm preview
+```

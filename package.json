@@ -7,9 +7,13 @@
   },
   "scripts": {
     "dev": "astro dev",
+    "dev:all": "pnpm run pb:serve & pnpm run dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "pb:install": "node scripts/install-pocketbase.mjs",
+    "pb:serve": "./.tools/pocketbase serve --http=127.0.0.1:8090 --dir=pb_data --migrationsDir=pb_migrations --publicDir=pb_public",
+    "pb:migrate": "./.tools/pocketbase migrate up --dir=pb_data --migrationsDir=pb_migrations --publicDir=pb_public"
   },
   "dependencies": {
     "astro": "^6.3.7"

@@ -6,6 +6,11 @@ dist/
 # dependencies
 node_modules/
 
+# pocketbase
+.tools/
+pb_data/
+pb_public/
+
 # logs
 npm-debug.log*
 yarn-debug.log*
