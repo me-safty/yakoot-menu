@@ -2,26 +2,75 @@
 type PocketBaseRecord = {
 	id: string;
 	name: string;
-	slug: string;
-	menuImage: string;
+	menuImage: string | string[];
 	sort?: number;
+};
+
+type SiteSettingsRecord = {
+	id: string;
+	footerLogo?: string;
+	hours?: string;
+	facebookUrl?: string;
+	instagramUrl?: string;
+};
+
+type AddressRecord = {
+	address?: string;
+	description?: string;
+	phoneNumber?: string;
+	sort?: number;
+};
+
+type Address = {
+	address: string;
+	description: string;
+	phoneNumber: string;
+};
+
+type SiteSettings = {
+	footerLogoUrl: string;
+	addresses: Address[];
+	hours: string;
+	facebookUrl: string;
+	instagramUrl: string;
 };
 
 type Category = {
 	name: string;
 	slug: string;
-	imageUrl: string;
+	imageUrls: string[];
 	tone: number;
 	shapeStyle: string;
 };
 
 const pocketBaseUrl = import.meta.env.PUBLIC_POCKETBASE_URL?.replace(/\/$/, '') ?? '';
+const restaurantName = 'ياقوت';
 let categories: Category[] = [];
 let cmsError = '';
 
+const fallbackSettings = {
+	footerLogoUrl: '',
+	addresses: [
+		{
+			address: 'Cairo, Egypt',
+			description: '',
+			phoneNumber: '0100 000 0000',
+		},
+	],
+	hours: 'Daily 10:00 AM - 12:00 AM',
+	facebookUrl: '#',
+	instagramUrl: '#',
+};
+
+let restaurant: SiteSettings = fallbackSettings;
+
 function toneFromSlug(slug: string) {
 	const total = [...slug].reduce((sum, char) => sum + char.charCodeAt(0), 0);
-	return (total % 6) + 1;
+	return (total % 12) + 1;
+}
+
+function slugFromName(name: string) {
+	return name.trim().toLowerCase().replace(/\s+/g, '-');
 }
 
 function randomShapeStyle(slug: string, index: number) {
@@ -65,7 +114,80 @@ function randomShapeStyle(slug: string, index: number) {
 	].join(';');
 }
 
+function normalizeAddresses(addresses: AddressRecord[]): Address[] {
+	const validAddresses = addresses
+		.filter((item): item is Record<string, unknown> => item !== null && typeof item === 'object')
+		.map((item) => ({
+			address: typeof item.address === 'string' ? item.address.trim() : '',
+			description: typeof item.description === 'string' ? item.description.trim() : '',
+			phoneNumber: typeof item.phoneNumber === 'string' ? item.phoneNumber.trim() : '',
+		}))
+		.filter((item) => item.address && item.phoneNumber);
+
+	return validAddresses.length > 0 ? validAddresses : fallbackSettings.addresses;
+}
+
+function normalizeMenuImages(menuImage: PocketBaseRecord['menuImage']): string[] {
+	return (Array.isArray(menuImage) ? menuImage : [menuImage])
+		.map((fileName) => fileName.trim())
+		.filter(Boolean);
+}
+
 if (pocketBaseUrl) {
+	try {
+		const params = new URLSearchParams({
+			perPage: '1',
+		});
+		const response = await fetch(
+			`${pocketBaseUrl}/api/collections/site_settings/records?${params.toString()}`
+		);
+
+		if (!response.ok) {
+			throw new Error(`PocketBase returned ${response.status}`);
+		}
+
+		const data = (await response.json()) as { items?: SiteSettingsRecord[] };
+		const settings = data.items?.[0];
+		const footerLogoUrl =
+			settings?.id && settings.footerLogo
+				? `${pocketBaseUrl}/api/files/site_settings/${settings.id}/${encodeURIComponent(
+						settings.footerLogo
+					)}`
+				: fallbackSettings.footerLogoUrl;
+		restaurant = {
+			...fallbackSettings,
+			...settings,
+			footerLogoUrl,
+		};
+	} catch {
+		restaurant = fallbackSettings;
+	}
+
+	try {
+		const params = new URLSearchParams({
+			sort: 'sort,address',
+			filter: 'isActive=true',
+		});
+		const response = await fetch(
+			`${pocketBaseUrl}/api/collections/footer_addresses/records?${params.toString()}`
+		);
+
+		if (!response.ok) {
+			throw new Error(`PocketBase returned ${response.status}`);
+		}
+
+		const data = (await response.json()) as { items?: AddressRecord[] };
+		restaurant = {
+			...restaurant,
+			addresses: normalizeAddresses(data.items ?? []),
+		};
+	} catch {
+		restaurant = {
+			...restaurant,
+			addresses: fallbackSettings.addresses,
+		};
+	}
+
 	try {
 		const params = new URLSearchParams({
 			sort: 'sort,name',
@@ -82,32 +204,27 @@ if (pocketBaseUrl) {
 		const data = (await response.json()) as { items?: PocketBaseRecord[] };
 		categories =
 			data.items
-				?.filter((record) => record.name && record.slug && record.menuImage)
-				.map((record, index) => ({
-					name: record.name,
-					slug: record.slug,
-					imageUrl: `${pocketBaseUrl}/api/files/categories/${record.id}/${encodeURIComponent(
-						record.menuImage
-					)}`,
-					tone: toneFromSlug(record.slug),
-					shapeStyle: randomShapeStyle(record.slug, index),
-				})) ?? [];
+				?.filter((record) => record.name && record.menuImage)
+				.map((record, index) => {
+					const slug = slugFromName(record.name);
+					const imageUrls = normalizeMenuImages(record.menuImage).map(
+						(fileName) =>
+							`${pocketBaseUrl}/api/files/categories/${record.id}/${encodeURIComponent(fileName)}`
+					);
+
+					return {
+						name: record.name,
+						slug,
+						imageUrls,
+						tone: toneFromSlug(slug),
+						shapeStyle: randomShapeStyle(slug, index),
+					};
+				})
+				.filter((category) => category.imageUrls.length > 0) ?? [];
 	} catch (error) {
 		cmsError = error instanceof Error ? error.message : 'Could not load menu.';
 	}
 }
-
-const restaurant = {
-	name: 'ياقوت',
-	phone: '0100 000 0000',
-	address: 'Cairo, Egypt',
-	hours: 'Daily 10:00 AM - 12:00 AM',
-};
-
-const socialLinks = {
-	facebook: '#',
-	instagram: '#',
-};
 ---
 
 <!doctype html>
@@ -122,22 +239,24 @@ const socialLinks = {
 			name="description"
 			content="Yakoot restaurant menu categories and menu images."
 		/>
-		<title>{restaurant.name} Menu</title>
+		<title>{restaurantName} Menu</title>
 	</head>
 	<body>
 		<header class="site-header" aria-label="Primary">
-			<a class="brand" href="/" aria-label={`${restaurant.name} home`}>
-				{restaurant.name}
+			<a class="brand" href="/" aria-label={`${restaurantName} home`}>
+				{restaurantName}
 			</a>
 			<nav class="social-links" aria-label="Social links">
-				<a class="icon-link" href={socialLinks.facebook} aria-label="Facebook">
+				<a class="icon-link" href={restaurant.facebookUrl} aria-label="Facebook">
 					<svg viewBox="0 0 24 24" aria-hidden="true">
-						<path d="M14 8.4V6.8c0-.8.5-1.1 1.2-1.1h1.6V3h-2.4C11.7 3 10 4.6 10 7.2v1.2H7.8v3H10V21h3.3v-9.6h2.7l.5-3H14Z" />
+						<path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
 					</svg>
 				</a>
-				<a class="icon-link" href={socialLinks.instagram} aria-label="Instagram">
+				<a class="icon-link" href={restaurant.instagramUrl} aria-label="Instagram">
 					<svg viewBox="0 0 24 24" aria-hidden="true">
-						<path d="M8 3h8a5 5 0 0 1 5 5v8a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5V8a5 5 0 0 1 5-5Zm0 2.2A2.8 2.8 0 0 0 5.2 8v8A2.8 2.8 0 0 0 8 18.8h8a2.8 2.8 0 0 0 2.8-2.8V8A2.8 2.8 0 0 0 16 5.2H8Zm4 3.2a3.6 3.6 0 1 1 0 7.2 3.6 3.6 0 0 1 0-7.2Zm0 2.1a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm4.2-2.7a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z" />
+						<rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+						<path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+						<line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
 					</svg>
 				</a>
 			</nav>
@@ -175,23 +294,54 @@ const socialLinks = {
 			}
 		</main>
 
-		<footer class="site-footer">
-			<strong>{restaurant.name}</strong>
-			<div class="contact-details">
-				<a href={`tel:${restaurant.phone.replaceAll(' ', '')}`}>{restaurant.phone}</a>
-				<span>{restaurant.address}</span>
-				<span>{restaurant.hours}</span>
+		<footer class="site-footer" aria-label="Restaurant details">
+			<div class="footer-shell">
+				<section class="footer-panel" aria-label={`${restaurantName} summary`}>
+					<div class="footer-brand">
+						{
+							restaurant.footerLogoUrl ? (
+								<img
+									class="footer-logo"
+									src={restaurant.footerLogoUrl}
+									alt={restaurantName}
+									loading="lazy"
+									decoding="async"
+								/>
+							) : (
+								<strong class="footer-mark">{restaurantName}</strong>
+							)
+						}
+						{restaurant.footerLogoUrl && <strong class="footer-title">{restaurantName}</strong>}
+					</div>
+					<div class="footer-actions">
+						<span class="footer-hours">{restaurant.hours}</span>
+					</div>
+				</section>
+				<section class="footer-contacts" aria-label="Locations">
+					<div class="contact-list">
+						{
+							restaurant.addresses.map((item) => (
+								<address class="contact-location">
+									<span class="contact-label">الفرع</span>
+									<span class="contact-address">{item.address}</span>
+									{item.description && <small>{item.description}</small>}
+									<a class="contact-phone" href={`tel:${item.phoneNumber.replaceAll(' ', '')}`}>
+										{item.phoneNumber}
+									</a>
+								</address>
+							))
+						}
+					</div>
+				</section>
 			</div>
 		</footer>
 
 		<dialog id="menuDialog" class="menu-dialog" aria-label="Menu image viewer">
-			<div class="dialog-bar">
-				<strong id="dialogTitle"></strong>
-				<button class="close" type="button" aria-label="Close menu">×</button>
-			</div>
+			<button class="close" type="button" aria-label="Close menu">×</button>
 			<div class="image-stage">
-				<img id="menuImage" alt="" />
+				<div id="menuImages" class="menu-images" aria-live="polite"></div>
 			</div>
+			<div id="menuDots" class="menu-dots" aria-label="Menu pages"></div>
 		</dialog>
 
 		<script type="application/json" id="categories-data" set:html={JSON.stringify(categories)} />
@@ -201,11 +351,13 @@ const socialLinks = {
 			const categories = JSON.parse(dataElement?.textContent || '[]');
 			const categoriesBySlug = new Map(categories.map((category) => [category.slug, category]));
 			const dialog = document.getElementById('menuDialog');
-			const menuImage = document.getElementById('menuImage');
-			const dialogTitle = document.getElementById('dialogTitle');
+			const menuImages = document.getElementById('menuImages');
+			const imageStage = dialog?.querySelector('.image-stage');
+			const menuDots = document.getElementById('menuDots');
 			const closeButton = dialog?.querySelector('.close');
 			let skipCloseUrlSync = false;
-			let activeImageRequest = 0;
+			let activeRenderRequest = 0;
+			let dotUpdateFrame = 0;
 
 			function setCategoryParam(slug) {
 				const url = new URL(window.location.href);
@@ -217,39 +369,108 @@ const socialLinks = {
 				window.history.pushState({}, '', url);
 			}
 
-			function openCategory(category, shouldPushState = true) {
-				if (!dialog || !menuImage || !dialogTitle || !category) return;
+			function setActiveDot(index) {
+				if (!menuDots) return;
 
-				const requestId = ++activeImageRequest;
+				Array.from(menuDots.children).forEach((dot, dotIndex) => {
+					if (!(dot instanceof HTMLButtonElement)) return;
+					const isActive = dotIndex === index;
+					dot.classList.toggle('is-active', isActive);
+					dot.setAttribute('aria-current', isActive ? 'true' : 'false');
+				});
+			}
+
+			function updateActiveDot() {
+				dotUpdateFrame = 0;
+				if (!menuImages || !menuDots || menuDots.children.length < 2) return;
+
+				const images = Array.from(menuImages.querySelectorAll('img'));
+				const stageRect = (imageStage || menuImages).getBoundingClientRect();
+				const stageCenterX = stageRect.left + stageRect.width / 2;
+				const stageCenterY = stageRect.top + stageRect.height / 2;
+				let activeIndex = 0;
+				let activeDistance = Number.POSITIVE_INFINITY;
+
+				images.forEach((image, index) => {
+					const imageRect = image.getBoundingClientRect();
+					const imageCenterX = imageRect.left + imageRect.width / 2;
+					const imageCenterY = imageRect.top + imageRect.height / 2;
+					const distance =
+						Math.abs(stageCenterX - imageCenterX) + Math.abs(stageCenterY - imageCenterY);
+
+					if (distance < activeDistance) {
+						activeDistance = distance;
+						activeIndex = index;
+					}
+				});
+
+				setActiveDot(activeIndex);
+			}
+
+			function scheduleDotUpdate() {
+				if (dotUpdateFrame) return;
+				dotUpdateFrame = window.requestAnimationFrame(updateActiveDot);
+			}
+
+			function openCategory(category, shouldPushState = true) {
+				if (!dialog || !menuImages || !menuDots || !category) return;
+
+				const requestId = ++activeRenderRequest;
 				dialog.dataset.imageState = 'loading';
-				menuImage.removeAttribute('src');
-				menuImage.alt = '';
-				dialogTitle.textContent = category.name;
+				menuImages.replaceChildren();
+				menuDots.replaceChildren();
+				menuImages.classList.toggle('has-multiple-images', category.imageUrls.length > 1);
+				menuDots.hidden = category.imageUrls.length < 2;
 
 				if (!dialog.open) {
 					dialog.showModal();
 				}
 
-				const nextImage = new Image();
-				nextImage.onload = async () => {
-					if (requestId !== activeImageRequest) return;
-					try {
-						await nextImage.decode();
-					} catch {
-						// The image is already loaded; decode can fail on some browsers.
+				const images = category.imageUrls.map((imageUrl, index) => {
+					const image = document.createElement('img');
+					image.alt =
+						category.imageUrls.length > 1
+							? `${category.name} menu page ${index + 1}`
+							: `${category.name} menu`;
+					image.loading = index === 0 ? 'eager' : 'lazy';
+					image.decoding = 'async';
+					image.addEventListener(
+						'load',
+						() => {
+							if (requestId === activeRenderRequest) {
+								image.dataset.loaded = 'true';
+							}
+						},
+						{ once: true }
+					);
+					image.src = imageUrl;
+					menuImages.append(image);
+					if (image.complete) {
+						image.dataset.loaded = 'true';
 					}
-					if (requestId !== activeImageRequest) return;
-					menuImage.src = category.imageUrl;
-					menuImage.alt = `${category.name} menu`;
-					dialog.dataset.imageState = 'loaded';
-				};
-				nextImage.onerror = () => {
-					if (requestId !== activeImageRequest) return;
-					menuImage.src = category.imageUrl;
-					menuImage.alt = `${category.name} menu`;
-					dialog.dataset.imageState = 'loaded';
-				};
-				nextImage.src = category.imageUrl;
+					return image;
+				});
+
+				if (category.imageUrls.length > 1) {
+					images.forEach((image, index) => {
+						const dot = document.createElement('button');
+						dot.type = 'button';
+						dot.className = 'menu-dot';
+						dot.setAttribute('aria-label', `${category.name} menu page ${index + 1}`);
+						dot.addEventListener('click', () => {
+							image.scrollIntoView({
+								behavior: 'smooth',
+								block: 'nearest',
+								inline: 'center'
+							});
+							setActiveDot(index);
+						});
+						menuDots.append(dot);
+					});
+					setActiveDot(0);
+					window.requestAnimationFrame(updateActiveDot);
+				}
+				dialog.dataset.imageState = 'loaded';
 
 				if (shouldPushState) {
 					setCategoryParam(category.slug);
@@ -257,11 +478,13 @@ const socialLinks = {
 			}
 
 			function closeCategory(shouldPushState = true) {
-				if (!dialog || !menuImage) return;
-				activeImageRequest++;
+				if (!dialog || !menuImages || !menuDots) return;
+				activeRenderRequest++;
 				dialog.dataset.imageState = 'loading';
-				menuImage.removeAttribute('src');
-				menuImage.alt = '';
+				menuImages.replaceChildren();
+				menuDots.replaceChildren();
+				menuDots.hidden = true;
+				menuImages.classList.remove('has-multiple-images');
 				if (dialog.open) {
 					skipCloseUrlSync = true;
 					dialog.close();
@@ -279,27 +502,17 @@ const socialLinks = {
 			});
 
 			closeButton?.addEventListener('click', () => closeCategory());
-			function isInsideRenderedImage(event) {
-				if (!menuImage || !menuImage.naturalWidth || !menuImage.naturalHeight) return false;
-				const rect = menuImage.getBoundingClientRect();
-				const imageRatio = menuImage.naturalWidth / menuImage.naturalHeight;
-				const frameRatio = rect.width / rect.height;
-				const renderedWidth = frameRatio > imageRatio ? rect.height * imageRatio : rect.width;
-				const renderedHeight = frameRatio > imageRatio ? rect.height : rect.width / imageRatio;
-				const left = rect.left + (rect.width - renderedWidth) / 2;
-				const top = rect.top + (rect.height - renderedHeight) / 2;
-
-				return (
-					event.clientX >= left &&
-					event.clientX <= left + renderedWidth &&
-					event.clientY >= top &&
-					event.clientY <= top + renderedHeight
-				);
-			}
-
+			menuImages?.addEventListener('scroll', scheduleDotUpdate, { passive: true });
+			imageStage?.addEventListener('scroll', scheduleDotUpdate, { passive: true });
+			window.addEventListener('resize', scheduleDotUpdate);
 			dialog?.addEventListener('click', (event) => {
-				if (!menuImage || closeButton?.contains(event.target)) return;
-				if (!isInsideRenderedImage(event)) {
+				if (
+					!menuImages ||
+					closeButton?.contains(event.target) ||
+					menuDots?.contains(event.target)
+				)
+					return;
+				if (!menuImages.contains(event.target)) {
 					closeCategory();
 				}
 			});
@@ -434,7 +647,11 @@ const socialLinks = {
 	.icon-link svg {
 		width: 1.18rem;
 		height: 1.18rem;
-		fill: currentColor;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 2;
+		stroke-linecap: round;
+		stroke-linejoin: round;
 	}
 
 	.shell {
@@ -504,7 +721,6 @@ const socialLinks = {
 	}
 
 	.category-card:focus-visible,
-	.close:focus-visible,
 	a:focus-visible {
 		outline: 3px solid var(--gold);
 		outline-offset: 4px;
@@ -586,6 +802,30 @@ const socialLinks = {
 		--card-bg: linear-gradient(135deg, #b36f4d, #5f342e);
 	}
 
+	.tone-7 {
+		--card-bg: linear-gradient(135deg, #33727a, #1f4249);
+	}
+
+	.tone-8 {
+		--card-bg: linear-gradient(135deg, #8b5d9a, #473052);
+	}
+
+	.tone-9 {
+		--card-bg: linear-gradient(135deg, #517246, #2c3f2b);
+	}
+
+	.tone-10 {
+		--card-bg: linear-gradient(135deg, #9a4f5f, #4e2734);
+	}
+
+	.tone-11 {
+		--card-bg: linear-gradient(135deg, #52718f, #2c3f55);
+	}
+
+	.tone-12 {
+		--card-bg: linear-gradient(135deg, #8a6a32, #4d3a23);
+	}
+
 	.empty-state {
 		max-width: 34rem;
 		padding: clamp(1.2rem, 4vw, 2rem);
@@ -611,38 +851,128 @@ const socialLinks = {
 
 	.site-footer {
 		margin-top: auto;
-		padding: 1rem clamp(1rem, 4vw, 3.5rem);
-		border: 1px solid rgb(37 24 23 / 12%);
+		padding: clamp(1.1rem, 3vw, 1.8rem) clamp(1rem, 4vw, 3.5rem);
+		border: 1px solid rgb(37 24 23 / 10%);
 		border-inline: 0;
 		border-bottom: 0;
 		background: rgb(255 248 239 / 82%);
-		backdrop-filter: blur(18px);
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem 2rem;
-		flex-wrap: wrap;
-		box-shadow: 0 -14px 38px rgb(62 33 28 / 7%);
 	}
 
-	.site-footer strong {
+	.footer-shell {
+		display: grid;
+		grid-template-columns: minmax(12rem, 0.75fr) minmax(18rem, 1.5fr);
+		align-items: start;
+		gap: clamp(1rem, 4vw, 2.5rem);
+	}
+
+	.footer-panel {
+		display: flex;
+		flex-direction: column;
+		gap: 0.9rem;
+	}
+
+	.footer-brand {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		min-width: 0;
+	}
+
+	.footer-mark {
 		font-family: Georgia, "Times New Roman", serif;
-		font-size: 1.5rem;
+		font-size: 2rem;
 		line-height: 1;
 	}
 
-	.contact-details {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.7rem 1.2rem;
-		color: var(--muted);
-		direction: ltr;
+	.footer-logo {
+		width: clamp(3rem, 7vw, 4.25rem);
+		aspect-ratio: 1;
+		flex: 0 0 auto;
+		display: block;
+		object-fit: contain;
 	}
 
-	.contact-details a {
+	.contact-label {
+		color: var(--gold);
+		font-size: 0.72rem;
+		font-weight: 900;
+		letter-spacing: 0;
+		line-height: 1;
+		text-transform: uppercase;
+	}
+
+	.footer-title {
+		font-family: Georgia, "Times New Roman", serif;
 		color: var(--ink);
+		font-size: clamp(1.35rem, 3vw, 2rem);
+		font-weight: 700;
+		line-height: 1;
+	}
+
+	.footer-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.8rem;
+		flex-wrap: wrap;
+	}
+
+	.footer-hours {
+		min-width: 0;
+		color: var(--muted);
+		font-size: 0.88rem;
+		font-weight: 700;
+		line-height: 1.25;
+	}
+
+	.footer-contacts {
+		min-width: 0;
+		text-align: start;
+	}
+
+	.contact-list {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+		gap: 1rem 1.25rem;
+	}
+
+	.contact-location {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+		min-width: 0;
+		margin: 0;
+		padding: 0;
+		font-style: normal;
+	}
+
+	.contact-address {
+		color: var(--ink);
+		font-size: 0.98rem;
 		font-weight: 800;
+		line-height: 1.3;
+	}
+
+	.contact-location small {
+		color: var(--muted);
+		font-size: 0.88rem;
+		font-weight: 600;
+		line-height: 1.35;
+	}
+
+	.contact-phone {
+		width: fit-content;
+		color: var(--green);
+		font-size: 0.92rem;
+		font-weight: 800;
+		line-height: 1.25;
 		text-decoration: none;
+	}
+
+	.contact-phone:hover,
+	.contact-phone:focus-visible {
+		color: var(--ink);
+		text-decoration: underline;
+		text-underline-offset: 0.2em;
 	}
 
 	.menu-dialog {
@@ -653,69 +983,123 @@ const socialLinks = {
 		margin: 0;
 		padding: 0;
 		border: 0;
-		background: #18100f;
+		background: rgb(24 16 15 / 74%);
+		backdrop-filter: blur(18px);
 		color: #fffaf1;
 	}
 
 	.menu-dialog::backdrop {
-		background: rgb(15 8 7 / 72%);
-	}
-
-	.dialog-bar {
-		position: sticky;
-		top: 0;
-		z-index: 2;
-		min-height: 4.25rem;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
-		padding: 0.8rem clamp(1rem, 4vw, 2rem);
-		background: rgb(24 16 15 / 88%);
+		background: rgb(15 8 7 / 56%);
 		backdrop-filter: blur(18px);
-		border-bottom: 1px solid rgb(255 250 241 / 14%);
-	}
-
-	.dialog-bar strong {
-		font-size: 1.1rem;
 	}
 
 	.close {
+		position: fixed;
+		top: max(0.85rem, env(safe-area-inset-top));
+		left: max(0.85rem, env(safe-area-inset-left));
+		z-index: 4;
 		width: 2.75rem;
 		height: 2.75rem;
-		border: 1px solid rgb(255 250 241 / 24%);
-		border-radius: 999px;
-		background: rgb(255 250 241 / 10%);
+		border: 0;
+		background: transparent;
 		color: #fffaf1;
 		font-size: 2rem;
 		line-height: 1;
 		cursor: pointer;
 	}
 
+	.close:focus-visible {
+		outline: none;
+	}
+
 	.image-stage {
-		height: calc(100dvh - 4.25rem);
-		overflow: hidden;
+		--dialog-pad: clamp(0.75rem, 3vw, 1.5rem);
+		height: 100dvh;
+		overflow: auto;
+		padding: var(--dialog-pad);
+		background: transparent;
+		overscroll-behavior: contain;
+	}
+
+	.menu-images {
+		width: 100%;
+		min-height: 100%;
+		margin: 0 auto;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		padding: clamp(0.75rem, 3vw, 1.5rem);
-		background: #18100f;
+		gap: clamp(0.85rem, 2vw, 1.25rem);
+		overflow-x: auto;
 	}
 
-	.image-stage img {
+	.menu-dots {
+		position: fixed;
+		inset-inline: 0;
+		bottom: max(1rem, env(safe-area-inset-bottom));
+		z-index: 3;
+		display: flex;
+		justify-content: center;
+		gap: 0.55rem;
+		pointer-events: none;
+	}
+
+	.menu-dots[hidden] {
+		display: none;
+	}
+
+	.menu-dot {
+		width: 0.7rem;
+		height: 0.7rem;
+		border: 1px solid rgb(255 250 241 / 70%);
+		border-radius: 999px;
+		background: rgb(255 250 241 / 28%);
+		padding: 0;
+		cursor: pointer;
+		pointer-events: auto;
+		transition:
+			background 160ms ease,
+			border-color 160ms ease,
+			transform 160ms ease;
+	}
+
+	.menu-dot.is-active {
+		background: #fffaf1;
+		border-color: #fffaf1;
+		transform: scale(1.22);
+	}
+
+	.menu-dot:focus-visible {
+		outline: 2px solid #fffaf1;
+		outline-offset: 4px;
+	}
+
+	.menu-images:empty {
+		min-height: 100%;
+	}
+
+	:global(.menu-images img) {
 		display: block;
-		width: 100%;
-		height: 100%;
+		width: auto;
+		max-width: 100%;
+		height: calc(100dvh - (var(--dialog-pad) * 2));
+		max-height: calc(100dvh - (var(--dialog-pad) * 2));
 		object-fit: contain;
+		flex: 0 0 auto;
 		border-radius: 8px;
 		background: #30211f;
 		box-shadow: 0 24px 80px rgb(0 0 0 / 36%);
-		opacity: 0;
-		transition: opacity 160ms ease;
+		opacity: 0.01;
+		transition:
+			opacity 180ms ease,
+			transform 180ms ease;
 	}
 
-	.menu-dialog[data-image-state="loaded"] .image-stage img {
+	:global(.menu-images img[data-loaded="true"]) {
 		opacity: 1;
+	}
+
+	:global(.menu-images img:hover) {
+		transform: translateY(-2px);
 	}
 
 	@media (max-width: 620px) {
@@ -744,8 +1128,71 @@ const socialLinks = {
 			font-size: clamp(1.8rem, 12vw, 3.2rem);
 		}
 
-		.contact-details {
+		.site-footer {
+			padding-block: 1rem;
+		}
+
+		.footer-shell {
+			grid-template-columns: 1fr;
+			gap: 0.8rem;
+		}
+
+		.footer-panel {
+			gap: 1rem;
+		}
+
+		.footer-actions {
+			align-items: stretch;
 			flex-direction: column;
+		}
+
+		.footer-hours {
+			border-radius: 8px;
+		}
+
+		.close {
+			width: 2.5rem;
+			height: 2.5rem;
+		}
+
+		.image-stage {
+			--dialog-pad: 0.75rem;
+			height: 100dvh;
+			overflow: auto;
+			padding: var(--dialog-pad);
+		}
+
+		.menu-images {
+			width: 100%;
+			min-height: 100%;
+			display: flex;
+			flex-direction: row;
+			align-items: center;
+			justify-content: center;
+			gap: 0.75rem;
+			overflow-x: auto;
+			scroll-snap-type: x mandatory;
+			scroll-padding-inline: 0.75rem;
+		}
+
+		.menu-images.has-multiple-images {
+			justify-content: flex-start;
+		}
+
+		:global(.menu-images img) {
+			width: auto;
+			max-width: 100%;
+			height: calc(100dvh - (var(--dialog-pad) * 2));
+			max-height: calc(100dvh - (var(--dialog-pad) * 2));
+			border-radius: 6px;
+			box-shadow: none;
+			object-fit: contain;
+			flex: 0 0 auto;
+			scroll-snap-align: center;
+		}
+
+		.contact-list {
+			grid-template-columns: 1fr;
 		}
 	}
 

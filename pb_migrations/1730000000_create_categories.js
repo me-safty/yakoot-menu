@@ -15,15 +15,10 @@ migrate((app) => {
 				presentable: true,
 			},
 			{
-				type: 'text',
-				name: 'slug',
-				required: true,
-			},
-			{
 				type: 'file',
 				name: 'menuImage',
 				required: true,
-				maxSelect: 1,
+				maxSelect: 10,
 				maxSize: 20000000,
 				mimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
 			},
@@ -37,7 +32,6 @@ migrate((app) => {
 				required: true,
 			},
 		],
-		indexes: ['CREATE UNIQUE INDEX idx_categories_slug ON categories (slug)'],
 	});
 
 	app.save(collection);

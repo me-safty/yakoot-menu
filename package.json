@@ -6,13 +6,13 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "dev": "astro dev",
+    "dev": "astro dev --host 0.0.0.0",
     "dev:all": "pnpm run pb:serve & pnpm run dev",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
     "pb:install": "node scripts/install-pocketbase.mjs",
-    "pb:serve": "./.tools/pocketbase serve --http=127.0.0.1:8090 --dir=pb_data --migrationsDir=pb_migrations --publicDir=pb_public",
+    "pb:serve": "./.tools/pocketbase serve --http=0.0.0.0:8090 --dir=pb_data --migrationsDir=pb_migrations --publicDir=pb_public",
     "pb:migrate": "./.tools/pocketbase migrate up --dir=pb_data --migrationsDir=pb_migrations --publicDir=pb_public"
   },
   "dependencies": {
