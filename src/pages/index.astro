@@ -440,14 +440,14 @@ if (pocketBaseUrl) {
 <style>
 	:root {
 		color-scheme: light;
-		--black: #0a0a0a;
-		--gold: #c4a14b;
-		--secondary: #b99645;
-		--champagne: #d3bb7b;
-		--dark-gold: #8a6a2a;
-		--paper: #f2f2f2;
-		--muted: #6b6250;
-		--shadow: 0 18px 42px rgb(10 10 10 / 10%);
+		--background: #9a787c;
+		--surface: #b89a9b;
+		--border: #6e4f52;
+		--accent: #d8c9c5;
+		--highlight: #f2eae4;
+		--text: #3b2a2b;
+		--muted: rgb(59 42 43 / 74%);
+		--shadow: 0 18px 42px rgb(110 79 82 / 20%);
 		font-family:
 			Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
 			sans-serif;
@@ -459,8 +459,8 @@ if (pocketBaseUrl) {
 
 	html {
 		min-height: 100%;
-		background: #261f14;
-		color: var(--paper);
+		background: var(--background);
+		color: var(--text);
 	}
 
 	body {
@@ -484,13 +484,13 @@ if (pocketBaseUrl) {
 		justify-content: center;
 		gap: 1rem;
 		padding: 1.45rem clamp(1.25rem, 5vw, 4.5rem);
-		background: var(--paper);
-		border-bottom: 1px solid var(--secondary);
+		background: var(--accent);
+		border-bottom: 1px solid var(--border);
 	}
 
 	.brand,
 	.icon-link {
-		color: var(--black);
+		color: var(--text);
 		text-decoration: none;
 	}
 
@@ -511,7 +511,7 @@ if (pocketBaseUrl) {
 	.icon-link {
 		width: 4.1rem;
 		height: 4.1rem;
-		border: 1px solid rgb(185 150 69 / 70%);
+		border: 1px solid rgb(110 79 82 / 55%);
 		border-radius: 999px;
 		display: grid;
 		place-items: center;
@@ -524,9 +524,9 @@ if (pocketBaseUrl) {
 
 	.icon-link:hover,
 	.icon-link:focus-visible {
-		background: var(--secondary);
-		border-color: var(--secondary);
-		color: var(--black);
+		background: var(--accent);
+		border-color: var(--border);
+		color: var(--text);
 		transform: translateY(-1px);
 	}
 
@@ -557,15 +557,15 @@ if (pocketBaseUrl) {
 		position: relative;
 		min-height: clamp(8.5rem, 20vw, 12rem);
 		overflow: hidden;
-		border: 1px solid var(--secondary);
+		border: 1px solid var(--border);
 		border-radius: 8px;
 		padding: clamp(1rem, 2.5vw, 1.4rem);
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		text-align: center;
-		color: var(--paper);
-		background: #261f14;
+		color: var(--text);
+		background: var(--surface);
 		box-shadow: var(--shadow);
 		cursor: pointer;
 		transform: translateY(0);
@@ -579,16 +579,16 @@ if (pocketBaseUrl) {
 
 	.category-card:hover,
 	.category-card:focus-visible {
-		background: var(--secondary);
-		border-color: var(--secondary);
-		color: var(--black);
+		background: var(--accent);
+		border-color: var(--border);
+		color: var(--text);
 		transform: translateY(-3px);
-		box-shadow: 0 24px 52px rgb(10 10 10 / 14%);
+		box-shadow: 0 24px 52px rgb(110 79 82 / 24%);
 	}
 
 	.category-card:focus-visible,
 	a:focus-visible {
-		outline: 3px solid var(--dark-gold);
+		outline: 3px solid var(--border);
 		outline-offset: 4px;
 	}
 
@@ -604,9 +604,9 @@ if (pocketBaseUrl) {
 	.empty-state {
 		max-width: 34rem;
 		padding: clamp(1.2rem, 4vw, 2rem);
-		border: 1px solid rgb(185 150 69 / 45%);
+		border: 1px solid rgb(110 79 82 / 45%);
 		border-radius: 8px;
-		background: rgb(185 150 69 / 8%);
+		background: rgb(242 234 228 / 38%);
 	}
 
 	.empty-state h2,
@@ -627,11 +627,11 @@ if (pocketBaseUrl) {
 	.site-footer {
 		margin-top: auto;
 		padding: clamp(1.1rem, 3vw, 1.8rem) clamp(1rem, 4vw, 3.5rem);
-		border: 1px solid var(--secondary);
+		border: 1px solid var(--border);
 		border-inline: 0;
 		border-bottom: 0;
-		background: var(--paper);
-		color: var(--black);
+		background: var(--accent);
+		color: var(--text);
 	}
 
 	.footer-shell {
@@ -656,7 +656,7 @@ if (pocketBaseUrl) {
 
 	.footer-mark {
 		font-family: Georgia, "Times New Roman", serif;
-		color: var(--gold);
+		color: var(--border);
 		font-size: 2rem;
 		line-height: 1;
 	}
@@ -670,7 +670,7 @@ if (pocketBaseUrl) {
 	}
 
 	.contact-label {
-		color: var(--gold);
+		color: var(--border);
 		font-size: 0.72rem;
 		font-weight: 900;
 		letter-spacing: 0;
@@ -680,7 +680,7 @@ if (pocketBaseUrl) {
 
 	.footer-title {
 		font-family: Georgia, "Times New Roman", serif;
-		color: var(--gold);
+		color: var(--border);
 		font-size: clamp(1.35rem, 3vw, 2rem);
 		font-weight: 700;
 		line-height: 1;
@@ -723,7 +723,7 @@ if (pocketBaseUrl) {
 	}
 
 	.contact-address {
-		color: var(--black);
+		color: var(--text);
 		font-size: 0.98rem;
 		font-weight: 800;
 		line-height: 1.3;
@@ -738,7 +738,7 @@ if (pocketBaseUrl) {
 
 	.contact-phone {
 		width: fit-content;
-		color: var(--gold);
+		color: var(--border);
 		font-size: 0.92rem;
 		font-weight: 800;
 		line-height: 1.25;
@@ -747,7 +747,7 @@ if (pocketBaseUrl) {
 
 	.contact-phone:hover,
 	.contact-phone:focus-visible {
-		color: var(--black);
+		color: var(--text);
 		text-decoration: underline;
 		text-underline-offset: 0.2em;
 	}
@@ -760,13 +760,13 @@ if (pocketBaseUrl) {
 		margin: 0;
 		padding: 0;
 		border: 0;
-		background: rgb(24 16 15 / 74%);
+		background: rgb(59 42 43 / 74%);
 		backdrop-filter: blur(18px);
-		color: #fffaf1;
+		color: var(--highlight);
 	}
 
 	.menu-dialog::backdrop {
-		background: rgb(15 8 7 / 56%);
+		background: rgb(59 42 43 / 56%);
 		backdrop-filter: blur(18px);
 	}
 
@@ -782,15 +782,15 @@ if (pocketBaseUrl) {
 		width: auto;
 		min-width: 5.2rem;
 		height: 2.35rem;
-		border: 1px solid rgb(255 250 241 / 62%);
+		border: 1px solid rgb(242 234 228 / 62%);
 		border-radius: 999px;
 		padding: 0 0.75rem;
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
 		gap: 0.35rem;
-		background: rgb(24 16 15 / 78%);
-		color: #fffaf1;
+		background: rgb(59 42 43 / 78%);
+		color: var(--highlight);
 		font-family: inherit;
 		font-size: 0.95rem;
 		font-weight: 800;
@@ -806,9 +806,9 @@ if (pocketBaseUrl) {
 
 	.close:hover,
 	.close:focus-visible {
-		border-color: #fffaf1;
-		background: #fffaf1;
-		color: rgb(24 16 15);
+		border-color: var(--highlight);
+		background: var(--highlight);
+		color: var(--text);
 		transform: translateY(-1px);
 	}
 
@@ -865,8 +865,8 @@ if (pocketBaseUrl) {
 		object-fit: contain;
 		flex: 0 0 auto;
 		border-radius: 8px;
-		background: #30211f;
-		box-shadow: 0 24px 80px rgb(0 0 0 / 36%);
+		background: var(--text);
+		box-shadow: 0 24px 80px rgb(59 42 43 / 36%);
 		opacity: 0.01;
 		transition:
 			opacity 180ms ease,
