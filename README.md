@@ -53,6 +53,7 @@ Tracked migration also creates collection `site_settings` for footer and social 
 
 | Field | Type | Notes |
 | --- | --- | --- |
+| `logo` | file | optional, jpg/png/webp/svg |
 | `footerLogo` | file | optional, jpg/png/webp/svg |
 | `hours` | text | required |
 | `facebookUrl` | url | optional |

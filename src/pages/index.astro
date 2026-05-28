@@ -8,6 +8,7 @@ type PocketBaseRecord = {
 
 type SiteSettingsRecord = {
 	id: string;
+	logo?: string;
 	footerLogo?: string;
 	hours?: string;
 	facebookUrl?: string;
@@ -29,6 +30,7 @@ type Address = {
 };
 
 type SiteSettings = {
+	logoUrl: string;
 	footerLogoUrl: string;
 	addresses: Address[];
 	hours: string;
@@ -49,6 +51,7 @@ let categories: Category[] = [];
 let cmsError = '';
 
 const fallbackSettings = {
+	logoUrl: '',
 	footerLogoUrl: '',
 	addresses: [
 		{
@@ -103,6 +106,12 @@ if (pocketBaseUrl) {
 
 		const data = (await response.json()) as { items?: SiteSettingsRecord[] };
 		const settings = data.items?.[0];
+		const logoUrl =
+			settings?.id && settings.logo
+				? `${pocketBaseUrl}/api/files/site_settings/${settings.id}/${encodeURIComponent(
+						settings.logo
+					)}`
+				: fallbackSettings.logoUrl;
 		const footerLogoUrl =
 			settings?.id && settings.footerLogo
 				? `${pocketBaseUrl}/api/files/site_settings/${settings.id}/${encodeURIComponent(
@@ -112,6 +121,7 @@ if (pocketBaseUrl) {
 		restaurant = {
 			...fallbackSettings,
 			...settings,
+			logoUrl,
 			footerLogoUrl,
 		};
 	} catch {
@@ -196,6 +206,18 @@ if (pocketBaseUrl) {
 	</head>
 	<body>
 		<header class="site-header" aria-label="Primary">
+			<a class="brand" href="/" aria-label={restaurantName}>
+				{restaurant.logoUrl ? (
+					<img
+						class="header-logo"
+						src={restaurant.logoUrl}
+						alt={restaurantName}
+						decoding="async"
+					/>
+				) : (
+					<strong class="brand-text">{restaurantName}</strong>
+				)}
+			</a>
 			<nav class="social-links" aria-label="Social links">
 				<a class="icon-link" href={restaurant.facebookUrl} aria-label="Facebook">
 					<svg viewBox="0 0 24 24" aria-hidden="true">
@@ -257,7 +279,6 @@ if (pocketBaseUrl) {
 								) : (
 									<strong class="footer-mark">{restaurantName}</strong>
 								)}
-								{restaurant.footerLogoUrl && <strong class="footer-title">{restaurantName}</strong>}
 							</div>
 							<div class="footer-actions">
 								<span class="footer-hours">{restaurant.hours}</span>
@@ -481,10 +502,10 @@ if (pocketBaseUrl) {
 		z-index: 10;
 		display: flex;
 		align-items: center;
-		justify-content: center;
+		justify-content: space-between;
 		gap: 1rem;
-		padding: 1.45rem clamp(1.25rem, 5vw, 4.5rem);
-		background: var(--paper);
+		padding: 0.85rem clamp(1.25rem, 5vw, 4.5rem);
+		background: #fff;
 		border-bottom: 1px solid var(--secondary);
 	}
 
@@ -495,10 +516,24 @@ if (pocketBaseUrl) {
 	}
 
 	.brand {
+		display: flex;
+		align-items: center;
+		min-width: 0;
+	}
+
+	.brand-text {
 		font-family: Georgia, "Times New Roman", serif;
-		font-size: clamp(2.6rem, 7vw, 5rem);
+		font-size: clamp(2.4rem, 6vw, 4.25rem);
 		font-weight: 700;
-		line-height: 0.9;
+		line-height: 1;
+	}
+
+	.header-logo {
+		display: block;
+		width: clamp(9rem, 19vw, 14.5rem);
+		max-width: 42vw;
+		height: clamp(4rem, 9vw, 6rem);
+		object-fit: contain;
 	}
 
 	.social-links {
@@ -630,7 +665,7 @@ if (pocketBaseUrl) {
 		border: 1px solid var(--secondary);
 		border-inline: 0;
 		border-bottom: 0;
-		background: var(--paper);
+		background: #fff;
 		color: var(--black);
 	}
 
@@ -662,7 +697,7 @@ if (pocketBaseUrl) {
 	}
 
 	.footer-logo {
-		width: clamp(3rem, 7vw, 4.25rem);
+		width: clamp(5rem, 12vw, 7.5rem);
 		aspect-ratio: 1;
 		flex: 0 0 auto;
 		display: block;
@@ -676,14 +711,6 @@ if (pocketBaseUrl) {
 		letter-spacing: 0;
 		line-height: 1;
 		text-transform: uppercase;
-	}
-
-	.footer-title {
-		font-family: Georgia, "Times New Roman", serif;
-		color: var(--gold);
-		font-size: clamp(1.35rem, 3vw, 2rem);
-		font-weight: 700;
-		line-height: 1;
 	}
 
 	.footer-actions {
@@ -888,7 +915,12 @@ if (pocketBaseUrl) {
 
 	@media (max-width: 620px) {
 		.site-header {
-			padding-block: 1.15rem;
+			padding-block: 0.65rem;
+		}
+
+		.header-logo {
+			width: clamp(7.75rem, 36vw, 10.25rem);
+			height: 3.6rem;
 		}
 
 		.icon-link {
