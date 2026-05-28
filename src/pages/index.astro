@@ -47,6 +47,7 @@ type Category = {
 
 const pocketBaseUrl = import.meta.env.PUBLIC_POCKETBASE_URL?.replace(/\/$/, '') ?? '';
 const restaurantName = 'ياقوت';
+const currentYear = new Date().getFullYear();
 let categories: Category[] = [];
 let cmsError = '';
 
@@ -266,38 +267,66 @@ if (pocketBaseUrl) {
 			restaurant.showFooter && (
 				<footer class="site-footer" aria-label="Restaurant details">
 					<div class="footer-shell">
-						<section class="footer-panel" aria-label={`${restaurantName} summary`}>
-							<div class="footer-brand">
-								{restaurant.footerLogoUrl ? (
-									<img
-										class="footer-logo"
-										src={restaurant.footerLogoUrl}
-										alt={restaurantName}
-										loading="lazy"
-										decoding="async"
-									/>
-								) : (
-									<strong class="footer-mark">{restaurantName}</strong>
-								)}
-							</div>
-							<div class="footer-actions">
-								<span class="footer-hours">{restaurant.hours}</span>
-							</div>
+						<section class="footer-brand" aria-label={`${restaurantName} logo`}>
+							{restaurant.footerLogoUrl ? (
+								<img
+									class="footer-logo"
+									src={restaurant.footerLogoUrl}
+									alt={restaurantName}
+									loading="lazy"
+									decoding="async"
+								/>
+							) : (
+								<strong class="footer-mark">{restaurantName}</strong>
+							)}
 						</section>
-						<section class="footer-contacts" aria-label="Locations">
+						<section class="footer-section footer-contacts" aria-label="Locations">
+							<h2 class="footer-title">فروعنا</h2>
 							<div class="contact-list">
 								{restaurant.addresses.map((item) => (
 									<address class="contact-location">
-										<span class="contact-label">الفرع</span>
-										<span class="contact-address">{item.address}</span>
-										{item.description && <small>{item.description}</small>}
-										<a class="contact-phone" href={`tel:${item.phoneNumber.replaceAll(' ', '')}`}>
-											{item.phoneNumber}
+										<div class="contact-heading">
+											<svg viewBox="0 0 24 24" aria-hidden="true">
+												<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+												<polyline points="9 22 9 12 15 12 15 22" />
+											</svg>
+											<span class="contact-address">{item.address}</span>
+										</div>
+										<a class="contact-line contact-phone" href={`tel:${item.phoneNumber.replaceAll(' ', '')}`}>
+											<svg viewBox="0 0 24 24" aria-hidden="true">
+												<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.91.33 1.8.62 2.65a2 2 0 0 1-.45 2.11L8 9.75a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.85.29 1.74.5 2.65.62A2 2 0 0 1 22 16.92Z" />
+											</svg>
+											<span>{item.phoneNumber}</span>
 										</a>
+										{item.description && (
+											<span class="contact-line">
+												<svg viewBox="0 0 24 24" aria-hidden="true">
+													<path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z" />
+													<circle cx="12" cy="10" r="3" />
+												</svg>
+												<small>{item.description}</small>
+											</span>
+										)}
 									</address>
 								))}
 							</div>
 						</section>
+						<section class="footer-section footer-hours-section" aria-label="Working hours">
+							<h2 class="footer-title">ساعات العمل</h2>
+							<div class="hours-row">
+								<svg viewBox="0 0 24 24" aria-hidden="true">
+									<circle cx="12" cy="12" r="9" />
+									<path d="M12 7v5l3 2" />
+								</svg>
+								<div>
+									<strong>جميع أيام الأسبوع</strong>
+									<span>{restaurant.hours}</span>
+								</div>
+							</div>
+						</section>
+					</div>
+					<div class="footer-copyright">
+						<span>© {currentYear} {restaurantName}. جميع الحقوق محفوظة.</span>
 					</div>
 				</footer>
 			)
@@ -480,12 +509,15 @@ if (pocketBaseUrl) {
 
 	html {
 		min-height: 100%;
+		min-height: 100svh;
 		background: #261f14;
 		color: var(--paper);
 	}
 
 	body {
 		min-height: 100vh;
+		min-height: 100svh;
+		min-height: 100dvh;
 		margin: 0;
 		display: flex;
 		flex-direction: column;
@@ -504,7 +536,7 @@ if (pocketBaseUrl) {
 		align-items: center;
 		justify-content: space-between;
 		gap: 1rem;
-		padding: 0.85rem clamp(1.25rem, 5vw, 4.5rem);
+		padding: 1.1rem clamp(1.25rem, 5vw, 4.5rem);
 		background: #fff;
 		border-bottom: 1px solid var(--secondary);
 	}
@@ -530,8 +562,8 @@ if (pocketBaseUrl) {
 
 	.header-logo {
 		display: block;
-		width: clamp(9rem, 19vw, 14.5rem);
-		max-width: 42vw;
+		width: clamp(8rem, 16vw, 12.5rem);
+		max-width: 36vw;
 		height: clamp(4rem, 9vw, 6rem);
 		object-fit: contain;
 	}
@@ -579,7 +611,8 @@ if (pocketBaseUrl) {
 		width: min(1120px, calc(100% - 2rem));
 		margin: 0 auto;
 		padding: clamp(1.5rem, 5vw, 3rem) 0 4rem;
-		flex: 1;
+		flex: 1 0 auto;
+		min-height: 0;
 	}
 
 	.category-grid {
@@ -660,8 +693,12 @@ if (pocketBaseUrl) {
 	}
 
 	.site-footer {
+		--footer-pad-block: clamp(1.35rem, 3vw, 2rem);
+		--footer-accent: #b97500;
+		flex: 0 0 auto;
 		margin-top: auto;
-		padding: clamp(1.1rem, 3vw, 1.8rem) clamp(1rem, 4vw, 3.5rem);
+		padding: var(--footer-pad-block) clamp(1rem, 4vw, 3.5rem);
+		padding-bottom: calc(var(--footer-pad-block) + env(safe-area-inset-bottom, 0px));
 		border: 1px solid var(--secondary);
 		border-inline: 0;
 		border-bottom: 0;
@@ -671,21 +708,17 @@ if (pocketBaseUrl) {
 
 	.footer-shell {
 		display: grid;
-		grid-template-columns: minmax(12rem, 0.75fr) minmax(18rem, 1.5fr);
+		grid-template-columns: minmax(7rem, 0.45fr) minmax(18rem, 1fr) minmax(14rem, 0.82fr);
 		align-items: start;
-		gap: clamp(1rem, 4vw, 2.5rem);
-	}
-
-	.footer-panel {
-		display: flex;
-		flex-direction: column;
-		gap: 0.9rem;
+		gap: clamp(2.4rem, 7vw, 6rem);
+		max-width: 1120px;
+		margin-inline: auto;
 	}
 
 	.footer-brand {
 		display: flex;
-		align-items: center;
-		gap: 0.75rem;
+		align-items: flex-start;
+		justify-content: flex-start;
 		min-width: 0;
 	}
 
@@ -697,78 +730,121 @@ if (pocketBaseUrl) {
 	}
 
 	.footer-logo {
-		width: clamp(5rem, 12vw, 7.5rem);
-		aspect-ratio: 1;
+		width: clamp(8rem, 16vw, 12.5rem);
+		max-width: 36vw;
+		height: clamp(4rem, 9vw, 6rem);
 		flex: 0 0 auto;
 		display: block;
 		object-fit: contain;
 	}
 
-	.contact-label {
-		color: var(--gold);
-		font-size: 0.72rem;
-		font-weight: 900;
-		letter-spacing: 0;
-		line-height: 1;
-		text-transform: uppercase;
+	.footer-section {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		text-align: right;
 	}
 
-	.footer-actions {
+	.footer-title {
+		margin: 0;
 		display: flex;
 		align-items: center;
-		gap: 0.8rem;
-		flex-wrap: wrap;
+		gap: 0.55rem;
+		color: var(--black);
+		font-size: clamp(1rem, 2.2vw, 1.18rem);
+		font-weight: 900;
+		line-height: 1;
 	}
 
-	.footer-hours {
-		min-width: 0;
-		color: var(--muted);
-		font-size: 0.88rem;
-		font-weight: 700;
-		line-height: 1.25;
+	.footer-title::before {
+		content: "";
+		width: 3px;
+		height: 1.12em;
+		flex: 0 0 auto;
+		border-radius: 999px;
+		background: var(--footer-accent);
 	}
 
 	.footer-contacts {
 		min-width: 0;
-		text-align: start;
 	}
 
 	.contact-list {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
-		gap: 1rem 1.25rem;
+		gap: 1.1rem;
 	}
 
 	.contact-location {
 		display: flex;
 		flex-direction: column;
-		gap: 0.35rem;
+		gap: 0.44rem;
 		min-width: 0;
 		margin: 0;
 		padding: 0;
 		font-style: normal;
 	}
 
-	.contact-address {
+	.contact-heading,
+	.contact-line,
+	.hours-row {
+		display: flex;
+		align-items: center;
+		justify-content: flex-start;
+		gap: 0.48rem;
+		min-width: 0;
+	}
+
+	.contact-heading {
+		color: var(--black);
+	}
+
+	.contact-line {
+		color: var(--muted);
+	}
+
+	.contact-heading svg,
+	.contact-line svg,
+	.hours-row svg {
+		width: 0.88rem;
+		height: 0.88rem;
+		flex: 0 0 auto;
+		fill: none;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		stroke-width: 1.9;
+	}
+
+	.contact-heading svg,
+	.hours-row svg {
+		stroke: var(--footer-accent);
+	}
+
+	.contact-line svg {
+		stroke: currentColor;
+	}
+
+	.contact-address,
+	.hours-row strong {
 		color: var(--black);
 		font-size: 0.98rem;
 		font-weight: 800;
 		line-height: 1.3;
 	}
 
-	.contact-location small {
+	.contact-location small,
+	.hours-row span {
 		color: var(--muted);
-		font-size: 0.88rem;
+		font-size: 0.82rem;
 		font-weight: 600;
 		line-height: 1.35;
 	}
 
 	.contact-phone {
-		width: fit-content;
-		color: var(--gold);
-		font-size: 0.92rem;
-		font-weight: 800;
-		line-height: 1.25;
+		width: max-content;
+		max-width: 100%;
+		color: var(--muted);
+		font-size: 0.84rem;
+		font-weight: 700;
 		text-decoration: none;
 	}
 
@@ -777,6 +853,29 @@ if (pocketBaseUrl) {
 		color: var(--black);
 		text-decoration: underline;
 		text-underline-offset: 0.2em;
+	}
+
+	.hours-row {
+		align-items: flex-start;
+	}
+
+	.hours-row div {
+		display: flex;
+		flex-direction: column;
+		gap: 0.28rem;
+		min-width: 0;
+	}
+
+	.footer-copyright {
+		max-width: 1120px;
+		margin: clamp(1.2rem, 3vw, 1.8rem) auto 0;
+		padding-top: 0.9rem;
+		border-top: 1px solid rgb(185 150 69 / 26%);
+		color: var(--muted);
+		font-size: 0.78rem;
+		font-weight: 700;
+		line-height: 1.4;
+		text-align: center;
 	}
 
 	.menu-dialog {
@@ -915,11 +1014,11 @@ if (pocketBaseUrl) {
 
 	@media (max-width: 620px) {
 		.site-header {
-			padding-block: 0.65rem;
+			padding-block: 0.85rem;
 		}
 
 		.header-logo {
-			width: clamp(7.75rem, 36vw, 10.25rem);
+			width: clamp(7rem, 32vw, 9.25rem);
 			height: 3.6rem;
 		}
 
@@ -953,25 +1052,12 @@ if (pocketBaseUrl) {
 		}
 
 		.site-footer {
-			padding-block: 1rem;
+			--footer-pad-block: 1rem;
 		}
 
 		.footer-shell {
 			grid-template-columns: 1fr;
-			gap: 0.8rem;
-		}
-
-		.footer-panel {
-			gap: 1rem;
-		}
-
-		.footer-actions {
-			align-items: stretch;
-			flex-direction: column;
-		}
-
-		.footer-hours {
-			border-radius: 8px;
+			gap: 1.4rem;
 		}
 
 		.close {
