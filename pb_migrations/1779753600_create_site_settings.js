@@ -9,13 +9,6 @@ migrate((app) => {
 		deleteRule: null,
 		fields: [
 			{
-				type: 'file',
-				name: 'footerLogo',
-				maxSelect: 1,
-				maxSize: 5000000,
-				mimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'],
-			},
-			{
 				type: 'text',
 				name: 'hours',
 				required: true,

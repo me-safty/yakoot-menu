@@ -9,7 +9,6 @@ type PocketBaseRecord = {
 type SiteSettingsRecord = {
 	id: string;
 	logo?: string;
-	footerLogo?: string;
 	hours?: string;
 	facebookUrl?: string;
 	instagramUrl?: string;
@@ -31,7 +30,6 @@ type Address = {
 
 type SiteSettings = {
 	logoUrl: string;
-	footerLogoUrl: string;
 	addresses: Address[];
 	hours: string;
 	facebookUrl: string;
@@ -53,7 +51,6 @@ let cmsError = '';
 
 const fallbackSettings = {
 	logoUrl: '',
-	footerLogoUrl: '',
 	addresses: [
 		{
 			address: 'Cairo, Egypt',
@@ -113,17 +110,10 @@ if (pocketBaseUrl) {
 						settings.logo
 					)}`
 				: fallbackSettings.logoUrl;
-		const footerLogoUrl =
-			settings?.id && settings.footerLogo
-				? `${pocketBaseUrl}/api/files/site_settings/${settings.id}/${encodeURIComponent(
-						settings.footerLogo
-					)}`
-				: fallbackSettings.footerLogoUrl;
 		restaurant = {
 			...fallbackSettings,
 			...settings,
 			logoUrl,
-			footerLogoUrl,
 		};
 	} catch {
 		restaurant = fallbackSettings;
@@ -267,19 +257,6 @@ if (pocketBaseUrl) {
 			restaurant.showFooter && (
 				<footer class="site-footer" aria-label="Restaurant details">
 					<div class="footer-shell">
-						<section class="footer-brand" aria-label={`${restaurantName} logo`}>
-							{restaurant.footerLogoUrl ? (
-								<img
-									class="footer-logo"
-									src={restaurant.footerLogoUrl}
-									alt={restaurantName}
-									loading="lazy"
-									decoding="async"
-								/>
-							) : (
-								<strong class="footer-mark">{restaurantName}</strong>
-							)}
-						</section>
 						<section class="footer-section footer-contacts" aria-label="Locations">
 							<h2 class="footer-title">فروعنا</h2>
 							<div class="contact-list">
@@ -698,6 +675,7 @@ if (pocketBaseUrl) {
 		flex: 0 0 auto;
 		margin-top: auto;
 		padding: var(--footer-pad-block) clamp(1rem, 4vw, 3.5rem);
+		padding-top: calc(var(--footer-pad-block) + 1rem);
 		padding-bottom: calc(var(--footer-pad-block) + env(safe-area-inset-bottom, 0px));
 		border: 1px solid var(--secondary);
 		border-inline: 0;
@@ -708,34 +686,11 @@ if (pocketBaseUrl) {
 
 	.footer-shell {
 		display: grid;
-		grid-template-columns: minmax(7rem, 0.45fr) minmax(18rem, 1fr) minmax(14rem, 0.82fr);
+		grid-template-columns: minmax(18rem, 1fr) minmax(14rem, 0.82fr);
 		align-items: start;
 		gap: clamp(2.4rem, 7vw, 6rem);
 		max-width: 1120px;
 		margin-inline: auto;
-	}
-
-	.footer-brand {
-		display: flex;
-		align-items: flex-start;
-		justify-content: flex-start;
-		min-width: 0;
-	}
-
-	.footer-mark {
-		font-family: Georgia, "Times New Roman", serif;
-		color: var(--gold);
-		font-size: 2rem;
-		line-height: 1;
-	}
-
-	.footer-logo {
-		width: clamp(8rem, 16vw, 12.5rem);
-		max-width: 36vw;
-		height: clamp(4rem, 9vw, 6rem);
-		flex: 0 0 auto;
-		display: block;
-		object-fit: contain;
 	}
 
 	.footer-section {
@@ -868,8 +823,8 @@ if (pocketBaseUrl) {
 
 	.footer-copyright {
 		max-width: 1120px;
-		margin: clamp(1.2rem, 3vw, 1.8rem) auto 0;
-		padding-top: 0.9rem;
+		margin: clamp(2rem, 4vw, 2.75rem) auto 0;
+		padding-block: 1.8rem 1.25rem;
 		border-top: 1px solid rgb(185 150 69 / 26%);
 		color: var(--muted);
 		font-size: 0.78rem;
