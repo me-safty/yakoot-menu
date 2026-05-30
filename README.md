@@ -7,7 +7,7 @@ Astro restaurant menu site backed by PocketBase.
 Copy `.env.example` to `.env` and set:
 
 ```sh
-PUBLIC_POCKETBASE_URL=https://<public-ip>
+PUBLIC_POCKETBASE_URL=https://217.55.171.129
 POCKETBASE_HTTP=127.0.0.1:8091
 POCKETBASE_INTERNAL_URL=http://127.0.0.1:8091
 ```
@@ -15,10 +15,10 @@ POCKETBASE_INTERNAL_URL=http://127.0.0.1:8091
 Production local env is `.env.production`:
 
 ```sh
-PUBLIC_POCKETBASE_URL=https://<public-ip>
+PUBLIC_POCKETBASE_URL=https://217.55.171.129
 POCKETBASE_HTTP=127.0.0.1:8091
 POCKETBASE_INTERNAL_URL=http://127.0.0.1:8091
-POCKETBASE_ORIGINS=https://<public-ip>,http://<public-ip>
+POCKETBASE_ORIGINS=https://217.55.171.129,http://217.55.171.129
 PB_ENCRYPTION_KEY=<32 chars>
 ```
 
@@ -41,7 +41,7 @@ pnpm run pb:serve
 Admin UI via VPN only:
 
 ```txt
-http://<tailscale-ip>:8092/cms/
+http://100.120.48.75:8092/cms/
 ```
 
 The first launch creates `pb_data/` and applies migrations.
@@ -119,7 +119,7 @@ pnpm preview
 Public IP:
 
 ```txt
-<public-ip>
+217.55.171.129
 ```
 
 Ports:
@@ -128,7 +128,7 @@ Ports:
 public router: 80 -> Mac 8080, 443 -> Mac 8443
 local Nginx: 8080, 8443
 internal PocketBase: 127.0.0.1:8091
-VPN CMS: <tailscale-ip>:8092/cms/
+VPN CMS: 100.120.48.75:8092/cms/
 ```
 
 Public Nginx exposes only:
@@ -143,7 +143,7 @@ Public Nginx exposes only:
 PocketBase dashboard and write APIs are VPN-only:
 
 ```txt
-http://<tailscale-ip>:8092/cms/
+http://100.120.48.75:8092/cms/
 ```
 
 Deploy script:
@@ -218,13 +218,13 @@ New-NetFirewallRule -DisplayName "Yakoot HTTPS" -Direction Inbound -Action Allow
 Deploy with HTTPS:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\install-windows-vps.ps1 -PublicIp <public-ip> -VpnIp <tailscale-ip>
+powershell -ExecutionPolicy Bypass -File .\scripts\install-windows-vps.ps1 -PublicIp 217.55.171.129 -VpnIp <tailscale-ip>
 ```
 
 Deploy HTTP-only, useful before cert/router is ready:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\install-windows-vps.ps1 -PublicIp <public-ip> -VpnIp <tailscale-ip> -SkipCert
+powershell -ExecutionPolicy Bypass -File .\scripts\install-windows-vps.ps1 -PublicIp 217.55.171.129 -VpnIp <tailscale-ip> -SkipCert
 ```
 
 The script:
@@ -241,8 +241,8 @@ creates scheduled tasks: YakootPocketBase, YakootCaddy
 Windows URLs:
 
 ```txt
-public site: https://<public-ip>
-HTTP-only fallback: http://<public-ip>
+public site: https://217.55.171.129
+HTTP-only fallback: http://217.55.171.129
 VPN CMS: http://<tailscale-ip>:8092/cms/
 ```
 
