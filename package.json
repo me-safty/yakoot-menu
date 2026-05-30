@@ -7,13 +7,22 @@
   },
   "scripts": {
     "dev": "astro dev --host 0.0.0.0",
-    "dev:all": "pnpm run pb:serve & pnpm run dev",
+    "dev:all": "pnpm run pb:serve:dev & pnpm run dev",
+    "deploy:build": "PUBLIC_POCKETBASE_URL=${PUBLIC_POCKETBASE_URL:-https://217.55.171.129} POCKETBASE_INTERNAL_URL=${POCKETBASE_INTERNAL_URL:-http://127.0.0.1:8091} astro build",
+    "deploy:mac": "scripts/install-mac-vps.sh",
+    "deploy:windows": "powershell -ExecutionPolicy Bypass -File scripts/install-windows-vps.ps1",
+    "deploy:windows:http": "powershell -ExecutionPolicy Bypass -File scripts/install-windows-vps.ps1 -SkipCert",
+    "windows:stop": "powershell -ExecutionPolicy Bypass -File scripts/stop-windows-vps.ps1",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
     "pb:install": "node scripts/install-pocketbase.mjs",
-    "pb:serve": "./.tools/pocketbase serve --http=0.0.0.0:8090 --dir=pb_data --migrationsDir=pb_migrations --publicDir=pb_public",
-    "pb:migrate": "./.tools/pocketbase migrate up --dir=pb_data --migrationsDir=pb_migrations --publicDir=pb_public"
+    "pb:serve": "scripts/serve-pocketbase-prod.sh",
+    "pb:serve:prod": "scripts/serve-pocketbase-prod.sh",
+    "pb:serve:windows": "powershell -ExecutionPolicy Bypass -File scripts/serve-pocketbase-prod.ps1",
+    "pb:serve:dev": "./.tools/pocketbase serve --http=0.0.0.0:8090 --dir=pb_data --migrationsDir=pb_migrations --publicDir=pb_public",
+    "pb:migrate": "./.tools/pocketbase migrate up --dir=pb_data --migrationsDir=pb_migrations --publicDir=pb_public",
+    "pb:migrate:windows": ".\\.tools\\pocketbase.exe migrate up --dir=pb_data --migrationsDir=pb_migrations --publicDir=pb_public"
   },
   "dependencies": {
     "astro": "^6.3.7"
