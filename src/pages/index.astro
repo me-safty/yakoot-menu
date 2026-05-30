@@ -43,9 +43,7 @@ type Category = {
 	imageUrls: string[];
 };
 
-const pocketBasePublicUrl = import.meta.env.PUBLIC_POCKETBASE_URL?.replace(/\/$/, '') ?? '';
-const pocketBaseFetchUrl =
-	import.meta.env.POCKETBASE_INTERNAL_URL?.replace(/\/$/, '') || pocketBasePublicUrl;
+const pocketBaseUrl = import.meta.env.PUBLIC_POCKETBASE_URL?.replace(/\/$/, '') ?? '';
 const restaurantName = 'ياقوت';
 const currentYear = new Date().getFullYear();
 let categories: Category[] = [];
@@ -91,13 +89,13 @@ function normalizeMenuImages(menuImage: PocketBaseRecord['menuImage']): string[]
 		.filter(Boolean);
 }
 
-if (pocketBasePublicUrl && pocketBaseFetchUrl) {
+if (pocketBaseUrl) {
 	try {
 		const params = new URLSearchParams({
 			perPage: '1',
 		});
 		const response = await fetch(
-			`${pocketBaseFetchUrl}/api/collections/site_settings/records?${params.toString()}`
+			`${pocketBaseUrl}/api/collections/site_settings/records?${params.toString()}`
 		);
 
 		if (!response.ok) {
@@ -108,7 +106,7 @@ if (pocketBasePublicUrl && pocketBaseFetchUrl) {
 		const settings = data.items?.[0];
 		const logoUrl =
 			settings?.id && settings.logo
-				? `${pocketBasePublicUrl}/api/files/site_settings/${settings.id}/${encodeURIComponent(
+				? `${pocketBaseUrl}/api/files/site_settings/${settings.id}/${encodeURIComponent(
 						settings.logo
 					)}`
 				: fallbackSettings.logoUrl;
@@ -127,7 +125,7 @@ if (pocketBasePublicUrl && pocketBaseFetchUrl) {
 			filter: 'isActive=true',
 		});
 		const response = await fetch(
-			`${pocketBaseFetchUrl}/api/collections/footer_addresses/records?${params.toString()}`
+			`${pocketBaseUrl}/api/collections/footer_addresses/records?${params.toString()}`
 		);
 
 		if (!response.ok) {
@@ -152,7 +150,7 @@ if (pocketBasePublicUrl && pocketBaseFetchUrl) {
 			filter: 'isActive=true',
 		});
 		const response = await fetch(
-			`${pocketBaseFetchUrl}/api/collections/categories/records?${params.toString()}`
+			`${pocketBaseUrl}/api/collections/categories/records?${params.toString()}`
 		);
 
 		if (!response.ok) {
@@ -167,7 +165,7 @@ if (pocketBasePublicUrl && pocketBaseFetchUrl) {
 					const slug = slugFromName(record.name);
 					const imageUrls = normalizeMenuImages(record.menuImage).map(
 						(fileName) =>
-							`${pocketBasePublicUrl}/api/files/categories/${record.id}/${encodeURIComponent(fileName)}`
+							`${pocketBaseUrl}/api/files/categories/${record.id}/${encodeURIComponent(fileName)}`
 					);
 
 					return {
@@ -246,7 +244,7 @@ if (pocketBasePublicUrl && pocketBaseFetchUrl) {
 					<section class="empty-state" aria-live="polite">
 						<h2>Menu not available</h2>
 						<p>
-							{pocketBasePublicUrl
+							{pocketBaseUrl
 								? cmsError || 'No active categories found.'
 								: 'Set PUBLIC_POCKETBASE_URL to load categories.'}
 						</p>
