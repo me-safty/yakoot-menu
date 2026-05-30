@@ -13,7 +13,7 @@ Target result:
 - Nginx serves Astro static files from `dist/`
 - Nginx terminates TLS
 
-Use a real domain if possible. IP-only HTTPS is possible with current Let's Encrypt short-lived IP certificates and Certbot 5.4+, but renewals are frequent and easier to break.
+Use a real domain for Windows deployment. Windows ACME tooling is good for domain certificates, but IP-only trusted HTTPS is still not a good Windows path. If you need browser-trusted HTTPS on a raw IP, use a Linux VPS or a Windows ACME client you have confirmed supports ACME IP identifiers.
 
 ## 0. Assumptions
 
@@ -35,6 +35,8 @@ $AcmeWebroot = "C:\yakoot\acme-webroot"
 $ScriptsDir = "C:\yakoot\scripts"
 $LogsDir = "C:\yakoot\logs"
 $BackupDir = "C:\yakoot\backups"
+$CertDir = "C:\yakoot\certs"
+$WinAcmeDir = "C:\win-acme"
 ```
 
 Services:
@@ -85,6 +87,8 @@ Resolve-DnsName $AppHost
 
 ### IP-only fallback
 
+Use this only for temporary HTTP testing.
+
 ```powershell
 $PublicIp = (Invoke-RestMethod -Uri "https://ifconfig.me")
 $AppHost = $PublicIp
@@ -92,7 +96,7 @@ $CertName = "yakoot-ip"
 $PublicPocketBaseUrl = "https://$PublicIp"
 ```
 
-IP certificates are short-lived. Run renewal multiple times per day.
+For production HTTPS on Windows, get a domain and use the domain flow below.
 
 ## 2. Provider firewall
 
@@ -169,7 +173,7 @@ This repo needs Node `>=22.12.0`.
 Download Nginx stable:
 
 ```powershell
-$NginxVersion = "1.26.3"
+$NginxVersion = "1.30.2"
 $NginxZip = "$env:TEMP\nginx-$NginxVersion.zip"
 Invoke-WebRequest -Uri "https://nginx.org/download/nginx-$NginxVersion.zip" -OutFile $NginxZip
 Expand-Archive -Path $NginxZip -DestinationPath "C:\" -Force
@@ -179,7 +183,7 @@ Rename-Item -Path "C:\nginx-$NginxVersion" -NewName "nginx" -Force
 Create folders:
 
 ```powershell
-New-Item -ItemType Directory -Force $BaseDir, $AcmeWebroot, $ScriptsDir, $LogsDir, $BackupDir, "$NginxDir\conf\conf.d" | Out-Null
+New-Item -ItemType Directory -Force $BaseDir, $AcmeWebroot, $ScriptsDir, $LogsDir, $BackupDir, $CertDir, "$NginxDir\conf\conf.d" | Out-Null
 ```
 
 Add `conf.d` include inside `C:\nginx\conf\nginx.conf`.
@@ -463,76 +467,86 @@ Expected:
 - `/cms/` -> `404`
 - `/api/` -> `404`
 
-## 12. Install Certbot for Windows
+## 12. Install win-acme
 
-Download official Windows installer:
+This guide uses win-acme for Windows TLS. It creates and renews domain certificates and can run a reload script after renewals.
 
-```powershell
-$CertbotInstaller = "$env:TEMP\certbot-beta-installer-win_amd64_signed.exe"
-Invoke-WebRequest `
-  -Uri "https://github.com/certbot/certbot/releases/latest/download/certbot-beta-installer-win_amd64_signed.exe" `
-  -OutFile $CertbotInstaller
-Start-Process -FilePath $CertbotInstaller -Wait
-```
-
-Restart PowerShell, then verify:
+Download latest win-acme:
 
 ```powershell
-certbot --version
+$WinAcmeRelease = Invoke-RestMethod "https://api.github.com/repos/win-acme/win-acme/releases/latest"
+$WinAcmeAsset = $WinAcmeRelease.assets |
+  Where-Object { $_.name -match "x64.*\.zip$" } |
+  Select-Object -First 1
+
+$WinAcmeZip = "$env:TEMP\$($WinAcmeAsset.name)"
+Invoke-WebRequest -Uri $WinAcmeAsset.browser_download_url -OutFile $WinAcmeZip
+
+New-Item -ItemType Directory -Force $WinAcmeDir | Out-Null
+Expand-Archive -Path $WinAcmeZip -DestinationPath $WinAcmeDir -Force
 ```
 
-For IP-only certificates, required: `certbot 5.4.0` or newer.
-
-Certbot on Windows obtains certificates but does not automatically install them into Nginx. Nginx paths are configured manually below.
-
-## 13. Issue TLS certificate
-
-### Domain certificate
+Verify:
 
 ```powershell
-certbot certonly `
-  --non-interactive `
-  --agree-tos `
-  --register-unsafely-without-email `
-  --webroot `
-  --webroot-path "C:\yakoot\acme-webroot" `
-  --config-dir "C:\Certbot" `
-  --work-dir "C:\Certbot\work" `
-  --logs-dir "C:\Certbot\logs" `
-  --cert-name "$CertName" `
-  -d "$AppHost"
+& "$WinAcmeDir\wacs.exe" --version
 ```
 
-If you also use `www.example.com`, add:
+Create Nginx reload script for renewals:
 
 ```powershell
--d "www.example.com"
+@"
+& C:\nginx\nginx.exe -p C:\nginx -t
+if (`$LASTEXITCODE -eq 0) {
+  & C:\nginx\nginx.exe -p C:\nginx -s reload
+}
+"@ | Set-Content -Path "$ScriptsDir\reload-nginx.ps1" -Encoding UTF8
 ```
 
-### IP-only certificate
+## 13. Issue domain TLS certificate
+
+This requires a domain. Do not use this section with a raw IP address.
 
 ```powershell
-certbot certonly `
-  --non-interactive `
-  --agree-tos `
-  --register-unsafely-without-email `
-  --preferred-profile shortlived `
-  --webroot `
-  --webroot-path "C:\yakoot\acme-webroot" `
-  --config-dir "C:\Certbot" `
-  --work-dir "C:\Certbot\work" `
-  --logs-dir "C:\Certbot\logs" `
-  --cert-name "$CertName" `
-  --ip-address "$PublicIp"
+& "$WinAcmeDir\wacs.exe" `
+  --source manual `
+  --host "$AppHost" `
+  --validation filesystem `
+  --webroot "$AcmeWebroot" `
+  --store pemfiles `
+  --pemfilespath "$CertDir" `
+  --pemfilesname "$CertName" `
+  --installation script `
+  --script "$ScriptsDir\reload-nginx.ps1" `
+  --accepttos
 ```
 
-If this fails:
+Expected files:
 
+```text
+C:\yakoot\certs\CERT_NAME-chain.pem
+C:\yakoot\certs\CERT_NAME-key.pem
+```
+
+If you also need `www.example.com`, set:
+
+```powershell
+$AppHost = "example.com,www.example.com"
+```
+
+Then use `example.com` as the Nginx primary server name and add `www.example.com` beside it in `server_name`.
+
+If certificate issuance fails:
+
+- Confirm DNS points to this VPS
 - Confirm provider firewall allows `80/tcp`
 - Confirm Windows firewall allows `80/tcp`
 - Confirm Nginx is running
 - Confirm `http://APP_HOST/.well-known/acme-challenge/test` is reachable from another internet connection
-- Confirm `certbot --version` is `5.4.0` or newer for IP certificates
+
+### About IP-only HTTPS on Windows
+
+Let's Encrypt IP certificates require ACME client support for IP identifiers. Certbot added this support, but Certbot Windows support is discontinued. On Windows VPS, the practical production answer is: use a domain. If raw-IP HTTPS is mandatory, use a Linux VPS or verify a Windows ACME client supports IP identifiers before building around it.
 
 ## 14. Final Nginx TLS config
 
@@ -564,8 +578,8 @@ server {
     server_tokens off;
     client_max_body_size 50M;
 
-    ssl_certificate C:/Certbot/live/$CertName/fullchain.pem;
-    ssl_certificate_key C:/Certbot/live/$CertName/privkey.pem;
+    ssl_certificate C:/yakoot/certs/$CertName-chain.pem;
+    ssl_certificate_key C:/yakoot/certs/$CertName-key.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 1d;
@@ -684,45 +698,36 @@ add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" alway
 
 Do not enable HSTS casually for IP-only deployment.
 
-## 15. Certbot renewal task
+## 15. win-acme renewal task
 
-Create renewal script:
+win-acme usually creates a scheduled task during certificate creation. Verify it:
 
 ```powershell
-@"
-certbot renew --quiet --config-dir C:\Certbot --work-dir C:\Certbot\work --logs-dir C:\Certbot\logs
-if (`$LASTEXITCODE -eq 0) {
-  & C:\nginx\nginx.exe -p C:\nginx -s reload
-}
-"@ | Set-Content -Path "$ScriptsDir\renew-cert.ps1" -Encoding UTF8
+Get-ScheduledTask | Where-Object { $_.TaskName -match "win-acme|wacs" }
 ```
 
-Create scheduled task, 3 times daily:
+If no task exists, create one:
 
 ```powershell
 $RenewAction = New-ScheduledTaskAction `
-  -Execute "PowerShell.exe" `
-  -Argument "-NoProfile -ExecutionPolicy Bypass -File C:\yakoot\scripts\renew-cert.ps1"
+  -Execute "$WinAcmeDir\wacs.exe" `
+  -Argument "--renew --quiet"
 
-$RenewTriggers = @(
-  New-ScheduledTaskTrigger -Daily -At 00:15,
-  New-ScheduledTaskTrigger -Daily -At 08:15,
-  New-ScheduledTaskTrigger -Daily -At 16:15
-)
+$RenewTrigger = New-ScheduledTaskTrigger -Daily -At 03:00
 
 Register-ScheduledTask `
-  -TaskName "Yakoot Certbot Renew" `
+  -TaskName "Yakoot win-acme Renew" `
   -Action $RenewAction `
-  -Trigger $RenewTriggers `
+  -Trigger $RenewTrigger `
   -RunLevel Highest `
   -User "SYSTEM" `
   -Force
 ```
 
-Test:
+Test renew:
 
 ```powershell
-certbot renew --dry-run --config-dir C:\Certbot --work-dir C:\Certbot\work --logs-dir C:\Certbot\logs
+& "$WinAcmeDir\wacs.exe" --renew --force --verbose
 ```
 
 ## 16. CMS access through SSH tunnel
